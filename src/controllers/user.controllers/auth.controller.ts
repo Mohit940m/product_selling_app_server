@@ -22,7 +22,10 @@ export class AuthController {
 
       // 1. Validate at least one identifier is present
       if (!email && !phone) {
-        return res.status(400).json({ message: 'Email or Phone number is required.' });
+        return res.status(400).json({ 
+            success: false,
+            message: 'Email or Phone number is required.' 
+        });
       }
 
       // 2. Check Uniqueness (Email and Phone must be unique)
@@ -32,7 +35,10 @@ export class AuthController {
 
       const existingUser = await User.findOne({ $or: query });
       if (existingUser) {
-        return res.status(409).json({ message: 'Email or Phone already in use.' });
+        return res.status(409).json({ 
+            success: false,
+            message: 'Email or Phone already in use.' 
+        });
       }
 
       // 3. Generate OTP via Service
@@ -76,7 +82,10 @@ export class AuthController {
       const { otp, registrationToken } = req.body;
 
       if (!otp || !registrationToken) {
-        return res.status(400).json({ message: 'OTP and Registration Token are required.' });
+        return res.status(400).json({ 
+            success: false,
+            message: 'OTP and Registration Token are required.' 
+        });
       }
 
       // 1. Decode and Verify Token
@@ -84,13 +93,19 @@ export class AuthController {
       const identifier = userData.email || userData.phone;
 
       if (!identifier) {
-        return res.status(400).json({ message: 'Invalid registration data.' });
+        return res.status(400).json({ 
+            success: false,
+            message: 'Invalid registration data.' 
+        });
       }
 
       // 2. Verify OTP
       const isOtpValid = await OtpService.verifyOtp(identifier, otp);
       if (!isOtpValid) {
-        return res.status(400).json({ message: 'Invalid OTP.' });
+        return res.status(400).json({ 
+            success: false,
+            message: 'Invalid OTP.' 
+        });
       }
 
       // 3. Create User in Database
@@ -100,13 +115,17 @@ export class AuthController {
       const authToken = generateAuthToken(newUser._id.toString());
 
       return res.status(201).json({
+        success: true,
         message: 'User registered and logged in successfully.',
         token: authToken,
         user: newUser
       });
 
     } catch (error: any) {
-      return res.status(400).json({ message: error.message });
+      return res.status(400).json({ 
+        success: false,
+        message: error.message 
+    });
     }
   }
 
@@ -120,12 +139,18 @@ export class AuthController {
       const { email, phone } = req.body;
       
       if (!email && !phone) {
-        return res.status(400).json({ message: 'Email or Phone is required.' });
+        return res.status(400).json({ 
+            success: false,
+            message: 'Email or Phone is required.' 
+        });
       }
 
       const user = await User.findOne({ $or: [{ email }, { phone }] });
       if (!user) {
-        return res.status(404).json({ message: 'User not found.' });
+        return res.status(404).json({ 
+            success: false,
+            message: 'User not found.' 
+        });
       }
 
       const identifier = email || phone;
@@ -152,22 +177,36 @@ export class AuthController {
       const identifier = email || phone;
 
       if (!identifier) {
-        return res.status(400).json({ message: 'Email or Phone is required.' });
+        return res.status(400).json({ 
+            success: false,
+            message: 'Email or Phone is required.'
+        });
+      }
+
+      if (!otp) {
+        return res.status(400).json({ 
+            success: false,
+            message: 'OTP is required.' 
+        });
       }
 
       const isOtpValid = await OtpService.verifyOtp(identifier, otp);
       if (!isOtpValid) {
-        return res.status(400).json({ message: 'Invalid OTP.' });
+        return res.status(400).json({ 
+            success: false,
+            message: 'Invalid OTP.' 
+        });
       }
 
         const user = await User.findOne({ $or: [{ email }, { phone }] });
 
         if (!user) {
-            return res.status(404).json({ message: 'User not found.' });
+            return res.status(404).json({ success: false, message: 'User not found.' });
         }
       const authToken = generateAuthToken(user._id.toString());
 
       return res.status(200).json({
+        success: true,
         message: 'Logged in successfully.',
         token: authToken,
         user

@@ -1,8 +1,11 @@
 import jwt from 'jsonwebtoken';
+import dotenv from 'dotenv';
+dotenv.config();
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
+
+const JWT_SECRET = process.env.JWT_SECRET;
 const REGISTRATION_TOKEN_EXPIRY = '10m'; // Short lived for OTP flow
-const AUTH_TOKEN_EXPIRY = '7d';
+const AUTH_TOKEN_EXPIRY = '30d';
 
 export interface RegistrationPayload {
   email?: string;
@@ -18,7 +21,7 @@ export const generateRegistrationToken = (payload: RegistrationPayload): string 
   // Ensure profileImage is not included if passed by accident
   const { profileImage, ...safePayload } = payload;
   
-  return jwt.sign(safePayload, JWT_SECRET, {
+  return jwt.sign(safePayload, JWT_SECRET as string, {
     expiresIn: REGISTRATION_TOKEN_EXPIRY,
   });
 };
@@ -28,7 +31,7 @@ export const generateRegistrationToken = (payload: RegistrationPayload): string 
  */
 export const verifyRegistrationToken = (token: string): RegistrationPayload => {
   try {
-    return jwt.verify(token, JWT_SECRET) as RegistrationPayload;
+    return jwt.verify(token, JWT_SECRET as string) as RegistrationPayload;
   } catch (error) {
     throw new Error('Invalid or expired registration token');
   }
@@ -38,11 +41,11 @@ export const verifyRegistrationToken = (token: string): RegistrationPayload => {
  * Generates the final authentication JWT for a logged-in user.
  */
 export const generateAuthToken = (userId: string): string => {
-  return jwt.sign({ id: userId }, JWT_SECRET, {
+  return jwt.sign({ id: userId }, JWT_SECRET as string, {
     expiresIn: AUTH_TOKEN_EXPIRY,
   });
 };
 
 export const verifyAuthToken = (token: string): any => {
-  return jwt.verify(token, JWT_SECRET);
+  return jwt.verify(token, JWT_SECRET as string);
 };

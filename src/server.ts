@@ -1,12 +1,12 @@
-import express from 'express';
 import dotenv from 'dotenv';
+dotenv.config(); // Load environment variables
+
+import express from 'express';
 import connectDB from './config/db.js';
 import cors from 'cors';
 import userRoutes from './routes/user.routes/userRoute.js';
 
-dotenv.config();
-
-const port = process.env.PORT || 4000;
+const port = process.env.PORT;
 
 connectDB();
 
