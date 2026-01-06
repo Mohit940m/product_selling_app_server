@@ -46,7 +46,35 @@ const router = Router();
  */
 router.post('/register', AuthController.registerUser);
 
-
+// Verify OTP for Registration
+/**
+ * @swagger
+ * /api/v1/user/verify-registration:
+ *   post:
+ *     tags:
+ *       - Users
+ *     summary: Verify OTP for registration
+ *     description: Endpoint to verify the OTP sent during user registration.
+ *     requestBody:
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *               - otp
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *                 description: The user's email address.
+ *               otp:
+ *                 type: string
+ *                 description: The OTP sent to the user's email.
+ *     responses:
+ *       '200':
+ *         description: OTP verified successfully.
+ */
 router.post('/verify-registration', AuthController.verifyOtpForRegistration);
 
 // Login Flow
