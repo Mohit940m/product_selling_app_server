@@ -59,14 +59,14 @@ const sellerSchema = new Schema<ISellerDocument>(
 );
 
 /* Hash password */
-sellerSchema.pre('save', async function(next: any) {
+sellerSchema.pre('save', async function() {
   if (!this.isModified('password')) {
-    return next();
+    return;
   }
   
   const salt = await bcrypt.genSalt(10);
   this.password = await bcrypt.hash(this.password, salt);
-  next();
+  return;
 });
 
 /* Compare password */
@@ -76,4 +76,7 @@ sellerSchema.methods.comparePassword = async function (
   return bcrypt.compare(password, this.password);
 };
 
-export default mongoose.model<ISellerDocument>("Seller", sellerSchema);
+const Seller = mongoose.model<ISellerDocument>("Seller", sellerSchema);
+
+export default Seller;
+export {};

@@ -24,6 +24,10 @@ const oprions: swaggerJSDoc.Options = {
                 description: 'Endpoints for managing users',
             },
             {
+                name: 'Sellers',
+                description: 'Endpoints for managing sellers',
+            },
+            {
                 name: 'Products',
                 description: 'Endpoints for managing products',
             },
@@ -53,7 +57,7 @@ const oprions: swaggerJSDoc.Options = {
 
     }
 },
-    apis: ['./src/routes/user.routes/*.ts'], // Path to the API docs
+    apis: ['./src/routes/user.routes/*.ts', './src/routes/seller.routes/*.ts'], // Path to the API docs
 };
 
 const swaggerSpec = swaggerJSDoc(oprions);

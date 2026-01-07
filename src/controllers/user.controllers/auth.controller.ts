@@ -18,7 +18,7 @@ export class AuthController {
    */
   static async registerUser(req: Request, res: Response) {
     try {
-      const { email, phone, profileImage, ...otherFields } = req.body;
+      const { email, phone, ...otherFields } = req.body;
 
       // 1. Validate at least one identifier is present
       if (!email && !phone) {
