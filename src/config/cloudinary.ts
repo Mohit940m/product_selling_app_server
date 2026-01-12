@@ -14,7 +14,7 @@ export const upload = (folderName: string) => {
     cloudinary: cloudinary,
     params: {
       folder: `e-commerce/${folderName}`,
-      allowed_formats: ['jpg', 'jpeg', 'png', 'gif'],
+      allowed_formats: ['jpg', 'jpeg', 'png', 'gif', 'webp' ],
       transformation: [{ width: 500, height: 500, crop: 'limit' }],
     } as any,
   });
