@@ -214,8 +214,53 @@ const editProductStatus = async (req: AuthRequest, res: Response) => {
     }
 };
 
+// increase stock of any product
+
+const increaseStock = async (req: AuthRequest, res: Response) => {
+    try {
+        // Ensure seller is authenticated
+        if (!req.seller) {
+            return res.status(401).json({ 
+                success: false, 
+                message: "Unauthorized. Seller not found." 
+            });
+        }
+
+        const { productId } = req.params;
+        const { addedStock } = req.body;
+
+        // Update the product stock using atomic update 
+        const product = await Product.findByIdAndUpdate(
+            productId,
+            { $inc: { stock: addedStock } },
+            { new: true }
+        );
+
+        if (!product) {
+            return res.status(404).json({
+                success: false,
+                message: "Product not found"
+            });
+        }
+
+        return res.status(200).json({
+            success: true,
+            message: `Product stock increased successfully`,
+            data: { product: productId, stock: product.stock, productName: product.name }
+        });
+    } catch (error: any) {
+        console.error("Increase Stock Error:", error);
+        return res.status(500).json({
+            success: false,
+            message: "Internal server error",
+            error: error.message
+        });
+    }
+};
+
 export { 
     createProduct,
     editProduct,
     editProductStatus,
+    increaseStock,
 };
