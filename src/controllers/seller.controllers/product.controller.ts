@@ -174,4 +174,48 @@ const editProduct = async (req: AuthRequest, res: Response) => {
     }
 };
 
-export { createProduct, editProduct };
+const editProductStatus = async (req: AuthRequest, res: Response) => {
+    try {
+        // Ensure seller is authenticated
+        if (!req.seller) {
+            return res.status(401).json({ 
+                success: false, 
+                message: "Unauthorized. Seller not found." 
+            });
+        }
+        // const sellerId = req.seller._id;
+        const { status } = req.body;
+        const { productId } = req.params;
+
+        const product = await Product.findById(productId);
+        if (!product) {
+            return res.status(404).json({
+                success: false,
+                message: "Product not found"
+            });
+        }
+
+        // Update the product status
+        product.isActive = status;
+        await product.save();
+
+        return res.status(200).json({
+            success: true,
+            message: `Product status updated successfully: ${status ? "activated" : "deactivated"}`,
+            data: { product: productId, isActive: product.isActive, productName: product.name }
+        });
+    } catch (error: any) {
+        console.error("Edit Product Status Error:", error);
+        return res.status(500).json({
+            success: false,
+            message: "Internal server error",
+            error: error.message
+        });
+    }
+};
+
+export { 
+    createProduct,
+    editProduct,
+    editProductStatus,
+};
