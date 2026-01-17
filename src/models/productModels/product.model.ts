@@ -8,7 +8,7 @@ export interface IProductDocument extends Document {
   images: string[];
   stock: number;
   isActive: boolean;
-  isDelete: boolean;
+  isDeleted: boolean;
   isFeatured: boolean;
   sellerId: mongoose.Types.ObjectId;
 }
@@ -42,7 +42,7 @@ const productSchema = new mongoose.Schema({
     type: Boolean,
     default: true
   },
-  isDelete: {
+  isDeleted: {
     type: Boolean,
     default: false
   },
