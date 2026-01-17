@@ -301,7 +301,41 @@ const getAllProducts = async (req: AuthRequest, res: Response) => {
     }
 };
 
+// get product by id
 
+const getProductById = async (req: AuthRequest, res: Response) => {
+    try {
+        // Ensure seller is authenticated
+        if (!req.seller) {
+            return res.status(401).json({
+                success: false,
+                message: "Unauthorized. Seller not found."
+            });
+        }
+        const { productId } = req.params;
+
+        const product = await Product.findById(productId);
+        if (!product) {
+            return res.status(404).json({
+                success: false,
+                message: "Product not found"
+            });
+        }
+
+        return res.status(200).json({
+            success: true,
+            message: "Product fetched successfully",
+            data: product
+        });
+    } catch (error: any) {
+        console.error("Get Product By ID Error:", error);
+        return res.status(500).json({
+            success: false,
+            message: "Internal server error",
+            error: error.message
+        });
+    }
+};
 
 
 
@@ -311,4 +345,5 @@ export {
     editProductStatus,
     increaseStock,
     getAllProducts,
+    getProductById,
 };

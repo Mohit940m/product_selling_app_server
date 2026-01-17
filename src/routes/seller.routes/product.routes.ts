@@ -5,6 +5,7 @@ import {
     editProductStatus,
     increaseStock,
     getAllProducts,
+    getProductById,
 } from '../../controllers/seller.controllers/product.controller.js';
 import {authenticateSeller} from '../../auth/auth.middleware.js';
 import { handleProductImageUpload } from "../../middlewares/imageUploadHandler.js";
@@ -17,6 +18,7 @@ router.put('/edit-product/:productId', authenticateSeller, handleProductImageUpl
 router.patch('/edit-product-status/:productId', authenticateSeller, editProductStatus);
 router.patch('/increase-stock/:productId', authenticateSeller, increaseStock);
 router.get('/get-all-products', authenticateSeller, getAllProducts);
+router.get('/get-product/:productId', authenticateSeller, getProductById);
 
 export default router;
 export {};
