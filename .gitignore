@@ -1,0 +1,9 @@
+.env
+node_modules/
+dist/
+.qodo/
+.vscode/
+npm-debug.log
+.git
+.env.local
+.env.development.local
