@@ -83,12 +83,13 @@ const sellerShippingSchema = new Schema<ISellerShippingDocument>(
 );
 
 // Pre-save: Automatically determine region from state if not provided
-sellerShippingSchema.pre("save", function(next: any) {
-  if (this.origin.state && !this.origin.region) {
-    const stateLower = this.origin.state.toLowerCase();
-    this.origin.region = STATE_REGION_MAPPING[stateLower] || "rest";
+sellerShippingSchema.pre("save", async function () {
+  if (!this.isModified("origin.state") || this.origin.region) {
+    return; // Skip if state is not modified or region is already set
   }
-  next();
+
+  const stateLower = this.origin.state.toLowerCase();
+  this.origin.region = STATE_REGION_MAPPING[stateLower] || "rest";
 });
 
 // Method: Smart calculation logic
@@ -100,29 +101,35 @@ sellerShippingSchema.methods.calculateShipping = function(destination: { city: s
   const originState = this.origin.state; // stored as lowercase
   const originRegion = this.origin.region;
 
+  const format = (zone: IShippingZone, type: string) => ({
+    cost: zone.cost,
+    time: zone.time,
+    type
+  });
+
   // 1. Remote Check (Islands)
   if (REMOTE_AREAS.includes(destState)) {
-    return { ...this.shippingRates.remote, type: "remote" };
+    return format(this.shippingRates.remote, "remote");
   }
 
   // 2. Same City
   if (destCity === originCity && destState === originState) {
-    return { ...this.shippingRates.sameCity, type: "sameCity" };
+    return format(this.shippingRates.sameCity, "sameCity");
   }
 
   // 3. Same State
   if (destState === originState) {
-    return { ...this.shippingRates.sameState, type: "sameState" };
+    return format(this.shippingRates.sameState, "sameState");
   }
 
   // 4. Same Region
   const destRegion = STATE_REGION_MAPPING[destState];
   if (originRegion && destRegion && originRegion === destRegion) {
-    return { ...this.shippingRates.sameRegion, type: "sameRegion" };
+    return format(this.shippingRates.sameRegion, "sameRegion");
   }
 
   // 5. Default: Rest of India
-  return { ...this.shippingRates.restOfIndia, type: "restOfIndia" };
+  return format(this.shippingRates.restOfIndia, "restOfIndia");
 };
 
 const SellerShipping = mongoose.model<ISellerShippingDocument>("SellerShipping", sellerShippingSchema);
