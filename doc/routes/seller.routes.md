@@ -162,22 +162,38 @@ Creates a new product listing.
 |---|---|---|---|
 | `name` | String | Yes | Name of the product. |
 | `description` | String | Yes | Detailed description. |
-| `price` | Number | Yes | Price of the product. |
 | `category` | String | Yes | Product category. |
-| `stock` | Number | No | Initial stock (default 0). |
 | `images` | File[] | Yes | At least one image file. |
+| `variantTypes` | Text (JSON String) | Yes | Product varientes. |
+| `variants` | Text (JSON String) | Yes | Product varientes. |
+
 
 #### Sample Response
 ```json
 {
-  "success": true,
-  "message": "Product created successfully",
-  "data": {
-    "_id": "64f8b...",
-    "name": "Wireless Headphones",
-    "price": 2000,
-    "images": ["url1", "url2"]
-  }
+    "success": true,
+    "message": "Product created successfully",
+    "data": {
+        "name": "Classic T-Shirt",
+        "description": "High quality cotton t-shirt",
+        "category": "Men's Clothing",
+        "images": [
+            "https://res.cloudinary.com/dgv0uypa9/image/upload/v1769545055/e-commerce/products/i6hzk8rhdemgdclzqaqm.webp",
+            "https://res.cloudinary.com/dgv0uypa9/image/upload/v1769545055/e-commerce/products/wamhvbh6uoou5otioi5x.webp"
+        ],
+        "variantTypes": [
+            "Size",
+            "Color"
+        ],
+        "isActive": true,
+        "isDeleted": false,
+        "isFeatured": false,
+        "sellerId": "695ead153cf7e889fd825032",
+        "_id": "69791d5f2a853102922c22b1",
+        "createdAt": "2026-01-27T20:17:35.928Z",
+        "updatedAt": "2026-01-27T20:17:35.928Z",
+        "__v": 0
+    }
 }
 ```
 
@@ -254,25 +270,28 @@ Adds stock to an existing product.
 #### Request Body
 | Field | Type | Required | Description |
 |---|---|---|---|
+| `variantId` | String | Yes | ID of the variant. |
 | `addedStock` | Number | Yes | Amount to add to current stock. |
 
 **Sample Request:**
 ```json
 {
-  "addedStock": 50
+    "variantId": "69791d5f2a853102922c22b3",
+    "addedStock": 10
 }
 ```
 
 #### Sample Response
 ```json
 {
-  "success": true,
-  "message": "Product stock increased successfully",
-  "data": {
-    "product": "64f8b...",
-    "stock": 150,
-    "productName": "Wireless Headphones Pro"
-  }
+    "success": true,
+    "message": "Stock increased successfully",
+    "data": {
+        "product": "69791d5f2a853102922c22b1",
+        "variantId": "69791d5f2a853102922c22b3",
+        "stock": 20,
+        "productName": "Classic T-Shirt"
+    }
 }
 ```
 

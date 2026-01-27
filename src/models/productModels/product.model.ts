@@ -3,14 +3,15 @@ import mongoose, { Schema, Document } from "mongoose";
 export interface IProductDocument extends Document {
   name: string;
   description: string;
-  price: number;
   category: string;
   images: string[];
-  stock: number;
   isActive: boolean;
   isDeleted: boolean;
   isFeatured: boolean;
   sellerId: mongoose.Types.ObjectId;
+
+  variantTypes: string[]; // ["size", "color"]
+  variants: mongoose.Types.ObjectId[]; // References to Variant documents
 }
 
 const productSchema = new mongoose.Schema({
@@ -23,10 +24,6 @@ const productSchema = new mongoose.Schema({
     type: String,
     required: true
   },
-  price: {
-    type: Number,
-    required: true
-  },
   category: {
     type: String,
     required: true
@@ -34,9 +31,13 @@ const productSchema = new mongoose.Schema({
   images: [{
     type: String
   }],
-  stock: {
-    type: Number,
-    default: 0
+  variantTypes: {
+    type: [String], // dynamic (max 2)
+    validate: {
+      validator: (v: string[]) => v.length <= 2,
+      message: "Maximum 2 variant types allowed"
+    }
+    
   },
   isActive: {
     type: Boolean,
@@ -54,7 +55,11 @@ const productSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Seller',
     required: true
-  }
+  },
+  variants: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Variant'
+  }]
 }, { timestamps: true });
 
 const Product = mongoose.model<IProductDocument>('Product', productSchema);

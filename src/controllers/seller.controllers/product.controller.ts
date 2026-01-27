@@ -2,6 +2,8 @@ import { Request, Response } from "express";
 import { AuthRequest } from '../../auth/auth.middleware.js';
 import Product from "../../models/productModels/product.model.js";
 import { v2 as cloudinary } from 'cloudinary';
+import Variant from "../../models/productModels/variant.model.js";
+import { IVariantDocument } from "../../models/productModels/variant.model.js";
 
 const createProduct = async (req: AuthRequest, res: Response) => {
     // Use the middleware to handle file upload before processing the body
@@ -15,13 +17,13 @@ const createProduct = async (req: AuthRequest, res: Response) => {
         }
         const sellerId = req.seller._id;
 
-        const { name, description, price, category, stock } = req.body;
+        let { name, description, category, variantTypes, variants } = req.body;
 
         // Validation
-        if (!name || !description || !price || !category) {
+        if (!name || !description || !category || !variantTypes || !variants) {
             return res.status(400).json({
                 success: false,
-                message: "Please provide all required fields: name, description, price, category."
+                message: "Please provide all required fields: name, description, category, variantTypes, variants."
             });
         }
 
@@ -37,20 +39,43 @@ const createProduct = async (req: AuthRequest, res: Response) => {
         // Extract image URLs
         const images = files.map((file) => file.path);
 
+        // Parse JSON strings if coming from form-data
+        try {
+            if (typeof variantTypes === 'string') variantTypes = JSON.parse(variantTypes);
+            if (typeof variants === 'string') variants = JSON.parse(variants);
+        } catch (err) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid JSON format for variantTypes or variants."
+            });
+        }
+
         const newProduct = await Product.create({
             name,
             description,
-            price,
             category,
-            stock: stock || 0,
+            variantTypes,
             images,
             sellerId
         });
 
+        // Create Variants
+        if (Array.isArray(variants)) {
+            const variantsData = variants.map((v: any) => ({
+                ...v,
+                productId: newProduct._id
+            }));
+            const createdVariants = await Variant.insertMany(variantsData);
+
+            // Update the product with the created variant IDs
+            newProduct.variants = createdVariants.map((variant) => variant._id);
+            await newProduct.save();
+        }
+
         return res.status(201).json({
             success: true,
             message: "Product created successfully",
-            data: newProduct
+            data: newProduct,
         });
     } catch (error: any) {
         console.error("Create Product Error:", error);
@@ -74,7 +99,7 @@ const editProduct = async (req: AuthRequest, res: Response) => {
         const sellerId = req.seller._id;
         const { productId } = req.params;
 
-        const { name, description, price, category, stock, imagesToDelete } = req.body;
+        const { name, description, category, imagesToDelete } = req.body;
 
         const product = await Product.findOne({ _id: productId, sellerId });
 
@@ -151,9 +176,7 @@ const editProduct = async (req: AuthRequest, res: Response) => {
         // 4. Update Fields
         if (name) product.name = name;
         if (description) product.description = description;
-        if (price) product.price = price;
         if (category) product.category = category;
-        if (stock !== undefined) product.stock = stock;
         product.images = updatedImages;
 
         await product.save();
@@ -227,26 +250,36 @@ const increaseStock = async (req: AuthRequest, res: Response) => {
         }
 
         const { productId } = req.params;
-        const { addedStock } = req.body;
+        const { addedStock, variantId } = req.body;
 
-        // Update the product stock using atomic update 
-        const product = await Product.findByIdAndUpdate(
-            productId,
+        if (!variantId) {
+            return res.status(400).json({
+                success: false,
+                message: "Variant ID is required to increase stock."
+            });
+        }
+
+        // Verify product ownership first
+        const product = await Product.findOne({ _id: productId, sellerId: req.seller._id });
+        if (!product) {
+            return res.status(404).json({ success: false, message: "Product not found or unauthorized." });
+        }
+
+        // Update the variant stock using atomic update 
+        const variant = await Variant.findOneAndUpdate(
+            { _id: variantId, productId },
             { $inc: { stock: addedStock } },
             { new: true }
         );
 
-        if (!product) {
-            return res.status(404).json({
-                success: false,
-                message: "Product not found"
-            });
+        if (!variant) {
+            return res.status(404).json({ success: false, message: "Variant not found." });
         }
 
         return res.status(200).json({
             success: true,
-            message: `Product stock increased successfully`,
-            data: { product: productId, stock: product.stock, productName: product.name }
+            message: `Stock increased successfully`,
+            data: { product: productId, variantId: variant._id, stock: variant.stock, productName: product.name }
         });
     } catch (error: any) {
         console.error("Increase Stock Error:", error);
@@ -270,8 +303,7 @@ const getAllProducts = async (req: AuthRequest, res: Response) => {
         }
         const { page = 1, limit = 10, category, search } = req.query;
 
-        let query: any = { isDeleted: false};
-
+        let query: any = { isDeleted: false };
 
         if (category) {
             query.category = category;
@@ -280,16 +312,39 @@ const getAllProducts = async (req: AuthRequest, res: Response) => {
             query.name = { $regex: new RegExp(search as string, 'i') };
         }
 
+        // Fetch products with populated variants
         const products = await Product.find(query)
             .skip((+page - 1) * +limit)
             .limit(+limit)
-            .select("name price category stock isActive images[0] isFeatured");
+            .select("name category isActive images isFeatured") // Select product fields
+            .populate({
+                path: "variants",
+                model: Variant, // Ensure the correct model is used for population
+                select: "sku price", // Select the required fields from the Variant model
+            })
+            .exec();
+
         const total = await Product.countDocuments(query);
+
+        // Restructure the data to include only one variant's sku and price at the product level
+        const formattedProducts = products.map((product) => {
+            const firstVariant = (product.variants[0] as unknown as IVariantDocument) || {}; // Cast the first variant to the Variant type or use an empty object
+            return {
+                _id: product._id,
+                name: product.name,
+                category: product.category,
+                isActive: product.isActive,
+                images: product.images,
+                isFeatured: product.isFeatured,
+                sku: firstVariant.sku || null, // Include the first variant's sku
+                price: firstVariant.price || null // Include the first variant's price
+            };
+        });
 
         return res.status(200).json({
             success: true,
             message: "Products fetched successfully",
-            data: { products, total, page: +page, limit: +limit }
+            data: { products: formattedProducts, total, page: +page, limit: +limit }
         });
     } catch (error: any) {
         console.error("Get All Products Error:", error);
@@ -322,10 +377,12 @@ const getProductById = async (req: AuthRequest, res: Response) => {
             });
         }
 
+        const variants = await Variant.find({ productId });
+
         return res.status(200).json({
             success: true,
             message: "Product fetched successfully",
-            data: product
+            data: { ...product.toObject(), variants }
         });
     } catch (error: any) {
         console.error("Get Product By ID Error:", error);
