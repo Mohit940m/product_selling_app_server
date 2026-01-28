@@ -66,7 +66,13 @@ const offerSchema = new Schema(
     },
 
     appliesTo: {
-      productIds: [{ type: Schema.Types.ObjectId, ref: "Product" }],
+      productIds: {
+        type: [{ type: Schema.Types.ObjectId, ref: "Product" }],
+        validate: {
+          validator: (v: any[]) => Array.isArray(v) && v.length > 0,
+          message: "At least one product ID is required."
+        }
+      },
       variantIds: [{ type: Schema.Types.ObjectId, ref: "Variant" }],
     },
 
