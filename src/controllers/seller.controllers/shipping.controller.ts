@@ -1,6 +1,6 @@
 import { Response } from "express";
 import { AuthRequest } from "../../auth/auth.middleware.js";
-import SellerShipping from "../../models/sellerModels/sellerShipping.model.js";
+import SellerShipping from "../../models/productModels/sellerShipping.model.js";
 
 /**
  * Create Shipping Configuration
