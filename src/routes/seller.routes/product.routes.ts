@@ -4,6 +4,7 @@ import {
     editProduct,
     editProductStatus,
     increaseStock,
+    editVariantPrice,
     getAllProducts,
     getProductById,
 } from '../../controllers/seller.controllers/product.controller.js';
@@ -17,6 +18,7 @@ router.post('/create-product', authenticateSeller, handleProductImageUpload, cre
 router.put('/edit-product/:productId', authenticateSeller, handleProductImageUpload, editProduct);
 router.patch('/edit-product-status/:productId', authenticateSeller, editProductStatus);
 router.patch('/increase-stock/:productId', authenticateSeller, increaseStock);
+router.patch('/edit-variant-price/:productId', authenticateSeller, editVariantPrice);
 router.get('/get-all-products', authenticateSeller, getAllProducts);
 router.get('/get-product/:productId', authenticateSeller, getProductById);
 

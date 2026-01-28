@@ -237,6 +237,7 @@ const editProductStatus = async (req: AuthRequest, res: Response) => {
     }
 };
 
+
 // increase stock of any product
 
 const increaseStock = async (req: AuthRequest, res: Response) => {
@@ -283,6 +284,71 @@ const increaseStock = async (req: AuthRequest, res: Response) => {
         });
     } catch (error: any) {
         console.error("Increase Stock Error:", error);
+        return res.status(500).json({
+            success: false,
+            message: "Internal server error",
+            error: error.message
+        });
+    }
+};
+
+// edit price of any product variant
+const editVariantPrice = async (req: AuthRequest, res: Response) => {
+    try {
+        // Ensure seller is authenticated
+        if (!req.seller) {
+            return res.status(401).json({
+                success: false,
+                message: "Unauthorized. Seller not found."
+            });
+        }
+
+        const { productId } = req.params;
+        const { price, variantId } = req.body;
+
+        if (!variantId || price === undefined) {
+            return res.status(400).json({
+                success: false,
+                message: "Variant ID and price are required."
+            });
+        }
+
+        // Verify product ownership first
+        const product = await Product.findOne({ _id: productId, sellerId: req.seller._id });
+        if (!product) {
+            return res.status(404).json({ success: false, message: "Product not found or unauthorized." });
+        }
+
+        // Update the variant price
+        const variant = await Variant.findOneAndUpdate(
+            { _id: variantId, productId },
+            { $set: { price: price } },
+            { new: true }
+        );
+
+        if (!variant) {
+            return res.status(404).json({ success: false, message: "Variant not found." });
+        }
+
+        const variantInfo = Object.entries(
+                    variant.attributes instanceof Map ? Object.fromEntries(variant.attributes) : variant.attributes
+                )
+                    .map(([key, value]) => `${key} ${value}`)
+                    .join(', ');
+
+        return res.status(200).json({
+            success: true,
+            message: `Price updated successfully`,
+            data: { 
+                product: productId,
+                variantId: variant._id,
+                price: variant.price,
+                productName: product.name,
+                variant: variantInfo,
+            }
+        });
+    } catch (error: any) {
+        console.error("Edit Variant Price Error:", error);
         return res.status(500).json({
             success: false,
             message: "Internal server error",
@@ -401,6 +467,7 @@ export {
     editProduct,
     editProductStatus,
     increaseStock,
+    editVariantPrice,
     getAllProducts,
     getProductById,
 };
