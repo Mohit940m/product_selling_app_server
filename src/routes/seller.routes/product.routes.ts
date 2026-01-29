@@ -7,6 +7,9 @@ import {
     editVariantPrice,
     getAllProducts,
     getProductById,
+    addVariant,
+    deleteProduct,
+    deleteProductPermanent,
 } from '../../controllers/seller.controllers/product.controller.js';
 import {authenticateSeller} from '../../auth/auth.middleware.js';
 import { handleProductImageUpload } from "../../middlewares/imageUploadHandler.js";
@@ -21,6 +24,9 @@ router.patch('/increase-stock/:productId', authenticateSeller, increaseStock);
 router.patch('/edit-variant-price/:productId', authenticateSeller, editVariantPrice);
 router.get('/get-all-products', authenticateSeller, getAllProducts);
 router.get('/get-product/:productId', authenticateSeller, getProductById);
+router.post('/add-variant/:productId', authenticateSeller, addVariant);
+router.delete('/delete-product/:productId', authenticateSeller, deleteProduct);
+router.delete('/delete-product-permanent/:productId', authenticateSeller, deleteProductPermanent);
 
 export default router;
 export {};

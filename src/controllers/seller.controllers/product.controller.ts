@@ -509,6 +509,102 @@ const addVariant = async (req: AuthRequest, res: Response) => {
     }
 };
 
+// Soft delete a product
+const deleteProduct = async (req: AuthRequest, res: Response) => {
+    try {
+        if (!req.seller) {
+            return res.status(401).json({
+                success: false,
+                message: "Unauthorized. Seller not found."
+            });
+        }
+        const { productId } = req.params;
+
+        const product = await Product.findOne({ _id: productId, sellerId: req.seller._id });
+
+        if (!product) {
+            return res.status(404).json({
+                success: false,
+                message: "Product not found or unauthorized."
+            });
+        }
+
+        product.isDeleted = true;
+        product.isActive = false;
+        await product.save();
+
+        return res.status(200).json({
+            success: true,
+            message: "Product soft deleted successfully"
+        });
+    } catch (error: any) {
+        console.error("Soft Delete Product Error:", error);
+        return res.status(500).json({
+            success: false,
+            message: "Internal server error",
+            error: error.message
+        });
+    }
+};
+
+// Hard delete a product (permanent delete with variants and images)
+const deleteProductPermanent = async (req: AuthRequest, res: Response) => {
+    try {
+        if (!req.seller) {
+            return res.status(401).json({
+                success: false,
+                message: "Unauthorized. Seller not found."
+            });
+        }
+        const { productId } = req.params;
+
+        const product = await Product.findOne({ _id: productId, sellerId: req.seller._id });
+
+        if (!product) {
+            return res.status(404).json({
+                success: false,
+                message: "Product not found or unauthorized."
+            });
+        }
+
+        // 1. Delete Images from Cloudinary
+        if (product.images && product.images.length > 0) {
+            const deletePromises = product.images.map(async (url) => {
+                if (typeof url !== 'string') return;
+                try {
+                    const regex = /\/upload\/(?:v\d+\/)?(.+)\.[^.]+$/;
+                    const match = url.match(regex);
+                    if (match && match[1]) {
+                        await cloudinary.uploader.destroy(match[1]);
+                    }
+                } catch (err) {
+                    console.error(`Failed to delete image ${url} from Cloudinary:`, err);
+                }
+            });
+            await Promise.all(deletePromises);
+        }
+
+        // 2. Delete all associated variants
+        await Variant.deleteMany({ productId: product._id });
+
+        // 3. Delete the product document
+        await Product.deleteOne({ _id: product._id });
+
+        return res.status(200).json({
+            success: true,
+            message: "Product, variants, and images permanently deleted."
+        });
+    } catch (error: any) {
+        console.error("Hard Delete Product Error:", error);
+        return res.status(500).json({
+            success: false,
+            message: "Internal server error",
+            error: error.message
+        });
+    }
+};
+
+
 
 export {
     createProduct,
@@ -519,4 +615,6 @@ export {
     getAllProducts,
     getProductById,
     addVariant,
+    deleteProduct,
+    deleteProductPermanent,
 };
