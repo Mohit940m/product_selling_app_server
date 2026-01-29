@@ -1,4 +1,5 @@
 import { Request, Response } from "express";
+import mongoose from "mongoose";
 import { AuthRequest } from '../../auth/auth.middleware.js';
 import Product from "../../models/productModels/product.model.js";
 import { v2 as cloudinary } from 'cloudinary';
@@ -65,10 +66,16 @@ const createProduct = async (req: AuthRequest, res: Response) => {
                 ...v,
                 productId: newProduct._id
             }));
-            const createdVariants = await Variant.insertMany(variantsData);
+            
+            // Create sequentially to ensure SKU random code consistency (via model hook)
+            const createdVariants: IVariantDocument[] = [];
+            for (const vData of variantsData) {
+                // Ensure this line has balanced parentheses
+                createdVariants.push((await Variant.create(vData)) as unknown as IVariantDocument);
+            }
 
             // Update the product with the created variant IDs
-            newProduct.variants = createdVariants.map((variant) => variant._id);
+            newProduct.variants = createdVariants.map((variant) => variant._id as mongoose.Types.ObjectId);
             await newProduct.save();
         }
 
@@ -330,9 +337,7 @@ const editVariantPrice = async (req: AuthRequest, res: Response) => {
             return res.status(404).json({ success: false, message: "Variant not found." });
         }
 
-        const variantInfo = Object.entries(
-                    variant.attributes instanceof Map ? Object.fromEntries(variant.attributes) : variant.attributes
-                )
+        const variantInfo = Object.entries(variant.attributes)
                     .map(([key, value]) => `${key} ${value}`)
                     .join(', ');
 
@@ -460,6 +465,42 @@ const getProductById = async (req: AuthRequest, res: Response) => {
     }
 };
 
+// Add a new variant to an existing product
+const addVariant = async (req: AuthRequest, res: Response) => {
+    try {
+        // Ensure seller is authenticated
+        if (!req.seller) {
+            return res.status(401).json({
+                success: false,
+                message: "Unauthorized. Seller not found."
+            });
+        }
+        const { productId } = req.params;
+        const { attributes, price, stock } = req.body;
+
+        const product = await Product.findOne({ _id: productId, sellerId: req.seller._id });
+        if (!product) {
+            return res.status(404).json({
+                success: false,
+                message: "Product not found or unauthorized."
+            });
+        }
+
+        const newVariant = await Variant.create({
+            productId,
+            attributes,
+            price,
+            stock
+        });
+
+        product.variants.push(newVariant._id);
+        await product.save();
+
+        return res.status(201).json({ success: true, message: "Variant added successfully", data: newVariant });
+    } catch (error: any) {
+        return res.status(500).json({ success: false, message: error.message });
+    }
+};
 
 
 export {
@@ -470,4 +511,5 @@ export {
     editVariantPrice,
     getAllProducts,
     getProductById,
+    addVariant,
 };

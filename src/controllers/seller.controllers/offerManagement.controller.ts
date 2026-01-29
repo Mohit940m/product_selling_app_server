@@ -25,15 +25,22 @@ const createOffer = async (req: AuthRequest, res: Response) => {
             validTill,
             usageLimit,
             perUserLimit,
-            isStackable,
-            isActive
+            isStackable
         } = req.body;
 
         // 1. Basic Validation
-        if (!name || !type || !config || !validFrom || !validTill || !appliesTo?.productIds || appliesTo.productIds.length === 0) {
+        const missingFields: string[] = [];
+        if (!name) missingFields.push("name");
+        if (!type) missingFields.push("type");
+        if (!config) missingFields.push("config");
+        if (!validFrom) missingFields.push("validFrom");
+        if (!validTill) missingFields.push("validTill");
+        if (!appliesTo?.productIds || appliesTo.productIds.length === 0) missingFields.push("appliesTo.productIds");
+
+        if (missingFields.length > 0) {
             return res.status(400).json({
                 success: false,
-                message: "Missing required fields: name, type, config, validFrom, validTill, appliesTo.productIds"
+                message: `Missing required fields: ${missingFields.join(", ")}`
             });
         }
 
