@@ -234,12 +234,12 @@ const editProductStatus = async (req: AuthRequest, res: Response) => {
 
         // Update the product status
         product.isActive = status;
-        await product.save();
+        const updatedProduct = await product.save();
 
         return res.status(200).json({
             success: true,
             message: `Product status updated successfully: ${status ? "activated" : "deactivated"}`,
-            data: { product: productId, isActive: product.isActive, productName: product.name }
+            data: { product: productId, isActive: updatedProduct.isActive, productName: updatedProduct.name }
         });
     } catch (error: any) {
         console.error("Edit Product Status Error:", error);
@@ -361,6 +361,54 @@ const editVariantPrice = async (req: AuthRequest, res: Response) => {
         });
     } catch (error: any) {
         console.error("Edit Variant Price Error:", error);
+        return res.status(500).json({
+            success: false,
+            message: "Internal server error",
+            error: error.message
+        });
+    }
+};
+
+const editVariantStatus = async (req: AuthRequest, res: Response) => {
+    try {
+        // Ensure seller is authenticated
+        if (!req.seller) {
+            return res.status(401).json({
+                success: false,
+                message: "Unauthorized. Seller not found."
+            });
+        }
+        // const sellerId = req.seller._id;
+        const { status, variantId } = req.body;
+        const { productId } = req.params;
+
+        const product = await Product.findById(productId);
+        if (!product) {
+            return res.status(404).json({
+                success: false,
+                message: "Product not found"
+            });
+        }
+
+        const variant = await Variant.findById({ _id: variantId , productId: productId });
+        if (!variant) {
+            return res.status(404).json({
+                success: false,
+                message: "Variant not found"
+            });
+        }
+
+        // Update the variant status
+        variant.isActive = status;
+        const updatedVariant = await variant.save();
+
+        return res.status(200).json({
+            success: true,
+            message: `Variant status updated successfully: ${status ? "activated" : "deactivated"}`,
+            data: { product: productId, isActive: updatedVariant.isActive, productName: product.name }
+        });
+    } catch (error: any) {
+        console.error("Edit Product Variant Status Error:", error);
         return res.status(500).json({
             success: false,
             message: "Internal server error",
@@ -612,6 +660,7 @@ export {
     editProductStatus,
     increaseStock,
     editVariantPrice,
+    editVariantStatus,
     getAllProducts,
     getProductById,
     addVariant,

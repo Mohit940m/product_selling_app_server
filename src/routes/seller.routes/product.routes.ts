@@ -5,6 +5,7 @@ import {
     editProductStatus,
     increaseStock,
     editVariantPrice,
+    editVariantStatus,
     getAllProducts,
     getProductById,
     addVariant,
@@ -22,6 +23,7 @@ router.put('/edit-product/:productId', authenticateSeller, handleProductImageUpl
 router.patch('/edit-product-status/:productId', authenticateSeller, editProductStatus);
 router.patch('/increase-stock/:productId', authenticateSeller, increaseStock);
 router.patch('/edit-variant-price/:productId', authenticateSeller, editVariantPrice);
+router.patch('/edit-variant-status/:productId', authenticateSeller, editVariantStatus);
 router.get('/get-all-products', authenticateSeller, getAllProducts);
 router.get('/get-product/:productId', authenticateSeller, getProductById);
 router.post('/add-variant/:productId', authenticateSeller, addVariant);
