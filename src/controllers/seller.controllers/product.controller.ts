@@ -21,10 +21,17 @@ const createProduct = async (req: AuthRequest, res: Response) => {
         let { name, description, category, variantTypes, variants } = req.body;
 
         // Validation
-        if (!name || !description || !category || !variantTypes || !variants) {
+        const missingFields = [];
+        if (!name) missingFields.push("name");
+        if (!description) missingFields.push("description");
+        if (!category) missingFields.push("category");
+        if (!variantTypes) missingFields.push("variantTypes");
+        if (!variants) missingFields.push("variants");
+
+        if (missingFields.length > 0) {
             return res.status(400).json({
                 success: false,
-                message: "Please provide all required fields: name, description, category, variantTypes, variants."
+                message: `Please provide all required fields: ${missingFields.join(", ")}.`
             });
         }
 
