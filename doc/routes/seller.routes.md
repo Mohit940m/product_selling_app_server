@@ -645,11 +645,8 @@ Creates a new offer for a product.
             "productIds": [
                 "697bcc089b9dbee534801d65"
             ],
-            "variantIds": [
-                "697bcc089b9dbee534801d67",
-                "697bcc089b9dbee534801d6a",
-                "697bcc089b9dbee534801d6d"
-            ]
+            "applyToAllVariants": true,
+            "variantIds": []
         },
         "config": {
             "discountType": "PERCENTAGE",
@@ -660,9 +657,9 @@ Creates a new offer for a product.
         "validTill": "2024-02-01T00:00:00.000Z",
         "isStackable": false,
         "isActive": true,
-        "_id": "697f7a2f0ca18a67c34b8cfa",
-        "createdAt": "2026-02-01T16:07:11.907Z",
-        "updatedAt": "2026-02-01T16:07:11.907Z",
+        "_id": "697fb62c65decba9b5deb132",
+        "createdAt": "2026-02-01T20:23:08.083Z",
+        "updatedAt": "2026-02-01T20:23:08.083Z",
         "__v": 0
     }
 }

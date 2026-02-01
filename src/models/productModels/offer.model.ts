@@ -29,11 +29,13 @@ export interface IBundleConfig {
 }
 
 export interface IOfferDocument extends Document {
+  sellerId: mongoose.Types.ObjectId;
   name: string;
   type: OfferType;
 
   appliesTo: {
     productIds?: mongoose.Types.ObjectId[];
+    applyToAllVariants: boolean;
     variantIds?: mongoose.Types.ObjectId[];
   };
 
@@ -57,6 +59,12 @@ export interface IOfferDocument extends Document {
 
 const offerSchema = new Schema(
   {
+    sellerId: {
+      type: Schema.Types.ObjectId,
+      ref: "Seller",
+      required: true
+    },
+
     name: { type: String, required: true },
 
     type: {
@@ -73,6 +81,7 @@ const offerSchema = new Schema(
           message: "At least one product ID is required."
         }
       },
+      applyToAllVariants: { type: Boolean, default: false },
       variantIds: [{ type: Schema.Types.ObjectId, ref: "Variant" }],
     },
 

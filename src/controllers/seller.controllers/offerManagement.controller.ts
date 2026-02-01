@@ -44,6 +44,60 @@ const createOffer = async (req: AuthRequest, res: Response) => {
             });
         }
 
+
+        // 1.1 Date Validation : Past dates are not allowed, validFrom and validTill must be in today or the future
+        const today = new Date();
+        today.setHours(0, 0, 0, 0); // Normalize 'today' to midnight
+
+        if (validFrom && new Date(validFrom) < today) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid validFrom date: must be in the future."
+            });
+        }
+        if (validTill && new Date(validTill) < today) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid validTill date: must be in the future."
+            });
+        }
+
+        // 1.2 If no specific variant IDs are provided, then applyToAllVariants is true
+        if (!appliesTo.variantIds || appliesTo.variantIds.length === 0) {
+            appliesTo.applyToAllVariants = true;
+        }
+
+        // 1.3 If specific variant IDs are provided, ensure they belong to the specified products
+        if (appliesTo.variantIds && appliesTo.variantIds.length > 0) {
+            const count = await Variant.countDocuments({
+                _id: { $in: appliesTo.variantIds },
+                productId: { $in: appliesTo.productIds }
+            });
+
+            if (count !== appliesTo.variantIds.length) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Some variant IDs do not belong to the specified products."
+                });
+            }
+        }
+
+        // 1.4 If specific variant IDs are provided, ensure they are active 
+        if (appliesTo.variantIds && appliesTo.variantIds.length > 0) {
+            const count = await Variant.countDocuments({
+                _id: { $in: appliesTo.variantIds },
+                isActive: true
+            });
+
+            if (count !== appliesTo.variantIds.length) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Some variant IDs are not active or have been deleted."
+                });
+            }
+        }
+
+        
         // 2. Security Check: Ensure products belong to this seller
         if (appliesTo?.productIds && appliesTo.productIds.length > 0) {
             const count = await Product.countDocuments({
@@ -59,14 +113,40 @@ const createOffer = async (req: AuthRequest, res: Response) => {
             }
         }
 
-        // 3. Auto-populate variants if not provided (Apply to all variants of the selected products)
-        if (!appliesTo.variantIds || appliesTo.variantIds.length === 0) {
-            const variants = await Variant.find({ productId: { $in: appliesTo.productIds } }).select('_id');
-            req.body.appliesTo.variantIds = variants.map(v => v._id);
+        // 2.1 Ensure similar type of offer like discount does not already exist for the same products and variants in the given time frame
+        const overlapQuery: any = {
+            sellerId: req.seller._id,
+            type: type,
+            "appliesTo.productIds": { $in: appliesTo.productIds }, // Must share at least one product
+            $and: [
+                { validFrom: { $lt: new Date(validTill) } },
+                { validTill: { $gt: new Date(validFrom) } }
+            ]
+        };
+
+        // If the new offer is NOT for all variants, we need to check specific variant overlaps.
+        // (If it IS for all variants, the query above is sufficient because it clashes with ANY offer on these products).
+        if (!appliesTo.applyToAllVariants) {
+            overlapQuery.$or = [
+                { "appliesTo.applyToAllVariants": true }, // Clashes if existing offer covers ALL variants
+                { "appliesTo.variantIds": { $in: appliesTo.variantIds } } // Clashes if existing offer covers overlapping variants
+            ];
         }
 
-        // 4. Create Offer
-        const newOffer = await Offer.create(req.body);
+        const existingOffer = await Offer.findOne(overlapQuery);
+
+        if (existingOffer) {
+            return res.status(409).json({
+                success: false,
+                message: "An overlapping offer already exists for the selected products or variants."
+            });
+        }
+
+        // 3. Create Offer
+        const newOffer = await Offer.create({
+            ...req.body,
+            sellerId: req.seller._id
+        });
 
         return res.status(201).json({
             success: true,
