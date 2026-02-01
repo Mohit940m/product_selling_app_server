@@ -534,3 +534,136 @@ Calculates shipping cost for a destination based on the seller's config.
     }
 }
 ```
+
+``
+
+## Offer
+
+### 1. Create Offer
+Creates a new offer for a product.
+
+
+- **Endpoint:** `POST /offer/create-offer`
+- **Auth Type:** Bearer Token
+
+#### Request Body
+```json
+{
+  "name": "10% Off Sale",
+  "type": "DISCOUNT",
+  "appliesTo":{
+    "productIds":["697bcc089b9dbee534801d65"]
+    },
+  "validFrom": "2024-01-01T00:00:00.000Z",
+  "validTill": "2024-02-01T00:00:00.000Z",
+  "config": {
+    "discountType": "PERCENTAGE",
+    "value": 10
+  },
+  "maxDiscountAmount": 100
+}
+
+```
+```json
+{
+  "name": "Wallet Cashback",
+  "type": "CASHBACK",
+  "appliesTo":{
+    "productIds":["697bcc089b9dbee534801d65"]
+    },
+  "validFrom": "2024-01-01T00:00:00.000Z",
+  "validTill": "2024-02-01T00:00:00.000Z",
+  "config": {
+    "amount": 50
+  },
+  "isActive": true
+}
+
+```
+```json
+{
+  "name": "Flat 500 Off",
+  "type": "DISCOUNT",
+  "appliesTo":{
+    "productIds":["697bcc089b9dbee534801d65"]
+    },
+  "validFrom": "2024-01-01T00:00:00.000Z",
+  "validTill": "2024-02-01T00:00:00.000Z",
+  "config": {
+    "discountType": "FLAT",
+    "value": 500
+  },
+  "minCartValue": 2000,
+  "isActive": true
+}
+```
+```json
+{
+  "name": "Buy 2 Get 1 Free",
+  "type": "BUY_GET",
+  "validFrom": "2024-01-01T00:00:00.000Z",
+  "validTill": "2024-02-01T00:00:00.000Z",
+  "config": {
+    "buyQty": 2,
+    "getQty": 1
+  },
+  "appliesTo": {
+    "productIds": ["64f8b5f2a853102922c22b1"] 
+  },
+  "isActive": true
+}
+```
+
+```json
+{
+  "name": "Summer Combo",
+  "type": "PRODUCT_BUNDLE",
+  "validFrom": "2024-01-01T00:00:00.000Z",
+  "validTill": "2024-02-01T00:00:00.000Z",
+  "config": {
+    "bundleItems": [
+        { "productId": "64f8b5f2a853102922c22b1", "quantity": 1 },
+        { "productId": "64f8b5f2a853102922c22b2", "quantity": 1 }
+    ],
+    "bundlePrice": 999
+  },
+  "isActive": true
+}
+
+```
+
+
+#### Sample Response
+```json
+{
+    "success": true,
+    "message": "Offer created successfully",
+    "data": {
+        "name": "10% Off Sale",
+        "type": "DISCOUNT",
+        "appliesTo": {
+            "productIds": [
+                "697bcc089b9dbee534801d65"
+            ],
+            "variantIds": [
+                "697bcc089b9dbee534801d67",
+                "697bcc089b9dbee534801d6a",
+                "697bcc089b9dbee534801d6d"
+            ]
+        },
+        "config": {
+            "discountType": "PERCENTAGE",
+            "value": 10
+        },
+        "maxDiscountAmount": 100,
+        "validFrom": "2024-01-01T00:00:00.000Z",
+        "validTill": "2024-02-01T00:00:00.000Z",
+        "isStackable": false,
+        "isActive": true,
+        "_id": "697f7a2f0ca18a67c34b8cfa",
+        "createdAt": "2026-02-01T16:07:11.907Z",
+        "updatedAt": "2026-02-01T16:07:11.907Z",
+        "__v": 0
+    }
+}
+```
