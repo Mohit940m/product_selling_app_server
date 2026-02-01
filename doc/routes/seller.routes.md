@@ -296,7 +296,7 @@ Adds stock to an existing product.
 ```
 
 ### 5. Get All Products
-Fetches products with pagination, search, and filtering.
+Fetches the seller's products with pagination, search, and filtering.
 
 - **Endpoint:** `GET /products/get-all-products`
 - **Auth Type:** Bearer Token

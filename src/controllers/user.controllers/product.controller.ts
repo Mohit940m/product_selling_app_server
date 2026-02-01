@@ -12,28 +12,107 @@ const getAllProducts = async (req: AuthRequest, res: Response) => {
                 message: "Unauthorized. Seller not found."
             });
         }
-        const { page = 1, limit = 10, category, search } = req.query;
+        
+        // Extract standard params, treat the rest as attribute filters
+        const { page = 1, limit = 10, category, search, ...filters } = req.query;
+        const pageNum = parseInt(page as string) || 1;
+        const limitNum = parseInt(limit as string) || 10;
 
-        let query: any = { isDeleted: false};
+        const pipeline: any[] = [];
 
+        // 1. Match Product Fields (Active, Not Deleted, Category, Search)
+        const matchStage: any = { isDeleted: false, isActive: true };
 
         if (category) {
-            query.category = category;
+            matchStage.category = category;
         }
         if (search) {
-            query.name = { $regex: new RegExp(search as string, 'i') };
+            matchStage.name = { $regex: new RegExp(search as string, 'i') };
         }
 
-        const products = await Product.find(query)
-            .skip((+page - 1) * +limit)
-            .limit(+limit)
-            .select("name price category isActive images[0] isFeatured");
-        const total = await Product.countDocuments(query);
+        pipeline.push({ $match: matchStage });
+
+        // 2. Lookup Variants
+        pipeline.push({
+            $lookup: {
+                from: "variants",
+                localField: "_id",
+                foreignField: "productId",
+                as: "variants"
+            }
+        });
+
+        // 3. Filter Variants (Active + Attribute Matching)
+        // We construct a filter condition for the variants array
+        const variantConditions: any[] = [{ $eq: ["$$variant.isActive", true] }];
+
+        // Iterate over dynamic attribute filters (e.g., size=M)
+        Object.keys(filters).forEach((key) => {
+            const val = filters[key];
+            if (val) {
+                variantConditions.push({
+                    $regexMatch: {
+                        // Convert attribute value to string and handle missing keys safely
+                        input: { $toString: { $ifNull: [`$$variant.attributes.${key}`, ""] } },
+                        // Exact match, case-insensitive (e.g., "m" matches "M")
+                        regex: new RegExp(`^${String(val)}$`, "i")
+                    }
+                });
+            }
+        });
+
+        pipeline.push({
+            $addFields: {
+                filteredVariants: {
+                    $filter: {
+                        input: "$variants",
+                        as: "variant",
+                        cond: { $and: variantConditions }
+                    }
+                }
+            }
+        });
+
+        // 4. Exclude products with no matching variants
+        pipeline.push({
+            $match: {
+                $expr: { $gt: [{ $size: "$filteredVariants" }, 0] }
+            }
+        });
+
+        // 5. Project fields and calculate price (min price of matching variants)
+        pipeline.push({
+            $project: {
+                name: 1,
+                description: 1,
+                category: 1,
+                images: 1,
+                isFeatured: 1,
+                isActive: 1,
+                price: { $min: "$filteredVariants.price" }
+            }
+        });
+
+        // 6. Pagination and Count
+        pipeline.push({
+            $facet: {
+                metadata: [{ $count: "total" }],
+                data: [
+                    { $skip: (pageNum - 1) * limitNum },
+                    { $limit: limitNum }
+                ]
+            }
+        });
+
+        const result = await Product.aggregate(pipeline);
+        
+        const products = result[0].data;
+        const total = result[0].metadata[0] ? result[0].metadata[0].total : 0;
 
         return res.status(200).json({
             success: true,
             message: "Products fetched successfully",
-            data: { products, total, page: +page, limit: +limit }
+            data: { products, total, page: pageNum, limit: limitNum }
         });
     } catch (error: any) {
         console.error("Get All Products Error:", error);
