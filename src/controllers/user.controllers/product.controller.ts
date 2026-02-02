@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { AuthRequest } from '../../auth/auth.middleware.js';
 import Product from "../../models/productModels/product.model.js";
+import { findApplicableOffers } from "../../utils/offer.util.js";
 
 // get all products of a seller with pagination, filtering and search
 const getAllProducts = async (req: AuthRequest, res: Response) => {
@@ -89,7 +90,8 @@ const getAllProducts = async (req: AuthRequest, res: Response) => {
                 images: 1,
                 isFeatured: 1,
                 isActive: 1,
-                price: { $min: "$filteredVariants.price" }
+                price: { $min: "$filteredVariants.price" },
+                filteredVariants: { _id: 1, price: 1 } // Keep variants to identify which one is the min price
             }
         });
 
@@ -105,9 +107,35 @@ const getAllProducts = async (req: AuthRequest, res: Response) => {
         });
 
         const result = await Product.aggregate(pipeline);
-        
-        const products = result[0].data;
+        let products = result[0].data;
         const total = result[0].metadata[0] ? result[0].metadata[0].total : 0;
+
+        // 7. Apply Offers
+        // We need to find offers for the specific variant that is being displayed (the one with min price)
+        const itemsToCheck = products.map((p: any) => {
+            // Find the variant that matches the projected min price
+            // (Simple sort to find the cheapest one if multiple have same price)
+            const displayVariant = p.filteredVariants?.sort((a: any, b: any) => a.price - b.price)[0];
+            
+            return {
+                productId: p._id,
+                variantId: displayVariant?._id,
+                price: p.price
+            };
+        });
+
+        const productsWithOffers = await findApplicableOffers(itemsToCheck);
+
+        // Merge offer data back into products and clean up
+        products = products.map((p: any, index: number) => {
+            const offerData = productsWithOffers[index];
+            const { filteredVariants, ...rest } = p; // Remove filteredVariants from final response
+            return {
+                ...rest,
+                discountedPrice: offerData.discountedPrice,
+                activeOffer: offerData.offers && offerData.offers.length > 0 ? offerData.offers[0] : null // Return the first applicable offer for UI badges
+            };
+        });
 
         return res.status(200).json({
             success: true,

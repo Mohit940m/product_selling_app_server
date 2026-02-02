@@ -155,7 +155,7 @@ Verifies the login OTP and returns an authentication token.
 Fetches products available in the marketplace with pagination, search, and filtering.
 
 - **Endpoint:** `GET /products/get-all-products`
-- **Auth Type:** None
+- **Auth Type:** User auth
 
 #### Query Parameters
 | Param | Description |
@@ -168,14 +168,112 @@ Fetches products available in the marketplace with pagination, search, and filte
 #### Sample Response
 ```json
 {
-  "success": true,
-  "message": "Products fetched successfully",
-  "data": {
-    "products": [ ... ],
-    "total": 50,
-    "page": 1,
-    "limit": 10
-  }
+    "success": true,
+    "message": "Products fetched successfully",
+    "data": {
+        "products": [
+            {
+                "_id": "697924cc247277aa1ef03f23",
+                "name": "Classic T-Shirt",
+                "description": "High quality cotton t-shirt",
+                "category": "Men's Clothing",
+                "images": [
+                    "https://res.cloudinary.com/dgv0uypa9/image/upload/v1769546956/e-commerce/products/dzsbr6tjae0xrh36l667.webp",
+                    "https://res.cloudinary.com/dgv0uypa9/image/upload/v1769546956/e-commerce/products/nr1dhymdx6ll4jr3d9gk.webp"
+                ],
+                "isActive": true,
+                "isFeatured": false,
+                "price": 500,
+                "discountedPrice": 500,
+                "activeOffer": null
+            },
+            {
+                "_id": "697a69e77983d9c1cefdf91d",
+                "name": "Men's 578 Blue Baggy Fit Mid Rise Jeans",
+                "description": "These baggy fit jeans are known for their classic style, timeless appeal, and easy wearability. Made with sturdy denim that's been used for generations, these jeans will last you a lifetime. Levi's are the epitome of utilitarian fashion, and you can't go wrong with them.",
+                "category": "Men's Clothing",
+                "images": [
+                    "https://res.cloudinary.com/dgv0uypa9/image/upload/v1769630182/e-commerce/products/iz49zgj6vfahynwabdgy.webp",
+                    "https://res.cloudinary.com/dgv0uypa9/image/upload/v1769630182/e-commerce/products/hx67s4n860tjxq8ke496.webp",
+                    "https://res.cloudinary.com/dgv0uypa9/image/upload/v1769630182/e-commerce/products/b4iv1ta7irhsmucuhill.webp"
+                ],
+                "isActive": true,
+                "isFeatured": false,
+                "price": 2799,
+                "discountedPrice": 2299,
+                "activeOffer": {
+                    "_id": "697a7cff8579a67c5eda1f75",
+                    "name": "Flat 500 Off",
+                    "type": "DISCOUNT",
+                    "appliesTo": {
+                        "productIds": [
+                            "697a69e77983d9c1cefdf91d"
+                        ],
+                        "variantIds": [
+                            "697a69e77983d9c1cefdf91f",
+                            "697a69e77983d9c1cefdf920"
+                        ],
+                        "applyToAllVariants": true
+                    },
+                    "config": {
+                        "discountType": "FLAT",
+                        "value": 500
+                    },
+                    "minCartValue": 2000,
+                    "validFrom": "2024-01-01T00:00:00.000Z",
+                    "validTill": "2027-02-01T00:00:00.000Z",
+                    "isStackable": false,
+                    "isActive": true,
+                    "createdAt": "2026-01-28T21:17:51.347Z",
+                    "updatedAt": "2026-01-28T21:17:51.347Z",
+                    "__v": 0
+                }
+            },
+            {
+                "_id": "697bcc089b9dbee534801d65",
+                "name": "Men's 512 Light Blue Slim Tapered Fit Mid Rise Jeans",
+                "description": "Everything you like about 512 Slim, but updated with a narrow-fit through the thigh and tapered leg for the fashion-forward guy. It's perfect for the modern look right now. This pair has just the right amount of stretch for all-day comfort and comes in a blue hue with the classic 5 pocket and a cotton material. Style it with our classic shirts and a pair of sneakers to complete your casual look.\n\n1. Sits below the waist\n2. Narrow leg for a more tailored look\n3. The perfect balance of slim and tapered",
+                "category": "Denim Jeans",
+                "images": [
+                    "https://res.cloudinary.com/dgv0uypa9/image/upload/v1769720840/e-commerce/products/stdkgiojk7ahrizfdy1z.jpg",
+                    "https://res.cloudinary.com/dgv0uypa9/image/upload/v1769720840/e-commerce/products/juwrvi3qu9u2iyx2gm9t.webp",
+                    "https://res.cloudinary.com/dgv0uypa9/image/upload/v1769720840/e-commerce/products/wfdgml0frez6rrl3i9en.webp"
+                ],
+                "isActive": true,
+                "isFeatured": false,
+                "price": 1500,
+                "discountedPrice": 1400,
+                "activeOffer": {
+                    "_id": "697fbe145c155274614bf8b1",
+                    "sellerId": "695ead153cf7e889fd825032",
+                    "name": "10% Off Sale",
+                    "type": "DISCOUNT",
+                    "appliesTo": {
+                        "productIds": [
+                            "697bcc089b9dbee534801d65"
+                        ],
+                        "applyToAllVariants": true,
+                        "variantIds": []
+                    },
+                    "config": {
+                        "discountType": "PERCENTAGE",
+                        "value": 10
+                    },
+                    "maxDiscountAmount": 100,
+                    "validFrom": "2026-02-02T00:00:00.000Z",
+                    "validTill": "2026-03-01T00:00:00.000Z",
+                    "isStackable": false,
+                    "isActive": true,
+                    "createdAt": "2026-02-01T20:56:52.042Z",
+                    "updatedAt": "2026-02-01T20:56:52.042Z",
+                    "__v": 0
+                }
+            }
+        ],
+        "total": 3,
+        "page": 1,
+        "limit": 10
+    }
 }
 ```
 
