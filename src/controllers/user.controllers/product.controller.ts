@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { AuthRequest } from '../../auth/auth.middleware.js';
 import Product from "../../models/productModels/product.model.js";
+import Variant from "../../models/productModels/variant.model.js";
 import { findApplicableOffers } from "../../utils/offer.util.js";
 
 // get all products of a seller with pagination, filtering and search
@@ -154,17 +155,19 @@ const getAllProducts = async (req: AuthRequest, res: Response) => {
 
 const getProductById = async (req: AuthRequest, res: Response) => {
     try {
-        // Ensure seller is authenticated
         if (!req.user) {
             return res.status(401).json({
                 success: false,
-                message: "Unauthorized. Seller not found."
+                message: "Unauthorized. User not found."
             });
         }
-        const {productId}  = req.params;
+        const { productId } = req.params;
+        const variantId = req.headers['variant-id'] as string;
 
-        const product = await Product.findById({ _id: productId, isDeleted: false, isActive: true })
-            .select("name description price category images isFeatured");
+        // 1. Fetch Product
+        const product = await Product.findOne({ _id: productId, isDeleted: false, isActive: true })
+            .select("name description category images isFeatured variantTypes sellerId");
+
         if (!product) {
             return res.status(404).json({
                 success: false,
@@ -172,10 +175,53 @@ const getProductById = async (req: AuthRequest, res: Response) => {
             });
         }
 
+        // 2. Fetch Variants
+        const variants = await Variant.find({ productId: product._id, isActive: true });
+
+        if (!variants || variants.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: "No active variants found for this product"
+            });
+        }
+
+        // 3. Determine Selected Variant (Default to first if not provided or not found)
+        let selectedVariant = variants[0];
+        if (variantId) {
+            const found = variants.find(v => v._id.toString() === variantId);
+            if (found) selectedVariant = found;
+        }
+
+        // 4. Calculate Offer for Selected Variant
+        const itemToCheck = {
+            productId: product._id,
+            variantId: selectedVariant._id,
+            price: selectedVariant.price
+        };
+
+        const [offerResult] = await findApplicableOffers([itemToCheck]);
+
+        // 5. Construct Response
+        const responseData = {
+            product,
+            selectedVariant: {
+                ...selectedVariant.toObject(),
+                discountedPrice: offerResult.discountedPrice,
+                activeOffer: offerResult.offers && offerResult.offers.length > 0 ? offerResult.offers[0] : null
+            },
+            variants: variants.map(v => ({
+                _id: v._id,
+                sku: v.sku,
+                attributes: v.attributes,
+                price: v.price,
+                stock: v.stock
+            }))
+        };
+
         return res.status(200).json({
             success: true,
             message: "Product fetched successfully",
-            data: product
+            data: responseData
         });
     } catch (error: any) {
         console.error("Get Product By ID Error:", error);
