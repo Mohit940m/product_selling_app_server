@@ -177,7 +177,103 @@ const getCart = async (req: AuthRequest, res: Response) => {
     }
 };
 
+const removeFromCart = async (req: AuthRequest, res: Response) => {
+    try {
+        if (!req.user) {
+            return res.status(401).json({
+                success: false,
+                message: "Unauthorized. User not found."
+            });
+        }
+        const userId = req.user._id;
+        const { productId, variantId, quantity } = req.body;
+
+        if (!productId || !variantId) {
+            return res.status(400).json({
+                success: false,
+                message: "Product ID and Variant ID are required."
+            });
+        }
+
+        const cart = await Cart.findOne({ userId });
+
+        if (!cart) {
+            return res.status(404).json({
+                success: false,
+                message: "Cart not found."
+            });
+        }
+
+        const itemIndex = cart.items.findIndex(
+            (item) => item.productId.toString() === productId && item.variantId.toString() === variantId
+        );
+
+        if (itemIndex === -1) {
+            return res.status(404).json({
+                success: false,
+                message: "Item not found in cart."
+            });
+        }
+
+        const currentQty = cart.items[itemIndex].quantity;
+        let removeQty = 1;
+        let message = "Item quantity decreased successfully.";
+
+        // If quantity is provided, use it. Otherwise default to 1.
+        if (quantity !== undefined && quantity !== null) {
+            const parsedQty = parseInt(quantity as string);
+            if (isNaN(parsedQty) || parsedQty < 1) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Quantity must be a valid positive number."
+                });
+            }
+            removeQty = parsedQty;
+        }
+
+        if (removeQty >= currentQty) {
+            // Remove the item completely
+            cart.items.splice(itemIndex, 1);
+            
+            if (removeQty > currentQty) {
+                message = `Item removed completely. You requested to remove ${removeQty}, but only ${currentQty} were in the cart.`;
+            } else {
+                message = "Item removed from cart successfully.";
+            }
+        } else {
+            // Decrease quantity
+            cart.items[itemIndex].quantity -= removeQty;
+        }
+
+        // Recalculate Cart Totals
+        let subTotal = 0;
+        cart.items.forEach((item) => {
+            subTotal += item.priceSnapshot * item.quantity;
+        });
+
+        cart.subTotal = subTotal;
+        cart.total = Math.max(0, cart.subTotal - cart.discount);
+
+        await cart.save();
+
+        return res.status(200).json({
+            success: true,
+            message: message,
+            data: cart
+        });
+
+    } catch (error: any) {
+        console.error("Remove from Cart Error:", error);
+        return res.status(500).json({
+            success: false,
+            message: "Internal server error",
+            error: error.message
+        });
+    }
+};
+
 export {
     addToCart,
-    getCart
+    getCart,
+    removeFromCart,
 };
