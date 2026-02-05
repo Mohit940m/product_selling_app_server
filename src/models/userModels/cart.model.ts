@@ -12,7 +12,9 @@ export interface ICart extends Document {
 
 export interface ICartItem {
     productId: mongoose.Types.ObjectId;
+    variantId: mongoose.Types.ObjectId;
     quantity: number;
+    attributes: object;
     priceSnapshot: number;
     addedAt: Date;
 }
@@ -26,11 +28,22 @@ const cartItemSchema = new Schema<ICartItem>(
             index: true
         },
 
+        variantId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "Variant",
+            required: true
+        },
+
         quantity: {
             type: Number,
             required: true,
             default: 1,
             min: 1
+        },
+
+        attributes: {
+            type: Object,
+            required: true
         },
 
         priceSnapshot: {
