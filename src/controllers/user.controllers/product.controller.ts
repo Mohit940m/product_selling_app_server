@@ -216,13 +216,27 @@ const getProductById = async (req: AuthRequest, res: Response) => {
 
         const [offerResult] = await findApplicableOffers([itemToCheck]);
 
+        let activeOffer = null;
+        if (offerResult.offers && offerResult.offers.length > 0) {
+            const offer = offerResult.offers[0];
+            activeOffer = {
+                _id: offer._id,
+                name: offer.name,
+                type: offer.type,
+                config: offer.config,
+                minCartValue: offer.minCartValue,
+                maxDiscountAmount: offer.maxDiscountAmount,
+                isStackable: offer.isStackable
+            };
+        }
+
         // 5. Construct Response
         const responseData = {
             product,
             selectedVariant: {
                 ...selectedVariant.toObject(),
                 discountedPrice: offerResult.discountedPrice,
-                activeOffer: offerResult.offers && offerResult.offers.length > 0 ? offerResult.offers[0] : null
+                activeOffer
             },
             variants: variants.map(v => ({
                 _id: v._id,
