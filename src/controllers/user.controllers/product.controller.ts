@@ -131,10 +131,25 @@ const getAllProducts = async (req: AuthRequest, res: Response) => {
         products = products.map((p: any, index: number) => {
             const offerData = productsWithOffers[index];
             const { filteredVariants, ...rest } = p; // Remove filteredVariants from final response
+
+            let activeOffer = null;
+            if (offerData.offers && offerData.offers.length > 0) {
+                const offer = offerData.offers[0];
+                activeOffer = {
+                    _id: offer._id,
+                    name: offer.name,
+                    type: offer.type,
+                    config: offer.config,
+                    minCartValue: offer.minCartValue,
+                    maxDiscountAmount: offer.maxDiscountAmount,
+                    isStackable: offer.isStackable
+                };
+            }
+
             return {
                 ...rest,
                 discountedPrice: offerData.discountedPrice,
-                activeOffer: offerData.offers && offerData.offers.length > 0 ? offerData.offers[0] : null // Return the first applicable offer for UI badges
+                activeOffer
             };
         });
 
