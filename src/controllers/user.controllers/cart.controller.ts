@@ -4,6 +4,7 @@ import { AuthRequest } from "../../auth/auth.middleware.js";
 import Cart from "../../models/userModels/cart.model.js";
 import Product from "../../models/productModels/product.model.js";
 import Variant from "../../models/productModels/variant.model.js";
+import { findApplicableOffers } from "../../utils/offer.util.js";
 
 const addToCart = async (req: AuthRequest, res: Response) => {
     try {
@@ -152,20 +153,93 @@ const getCart = async (req: AuthRequest, res: Response) => {
         const userId = req.user._id;
 
         const cart = await Cart.findOne({ userId })
-            .populate("items.productId", "name category images");
+            .populate("items.productId", "name category images")
+            .populate("items.variantId", "price stock attributes sku");
 
         if (!cart) {
             return res.status(200).json({
                 success: true,
                 message: "Cart is empty",
-                data: { items: [], subTotal: 0, total: 0 }
+                data: { items: [], subTotal: 0, total: 0, discount: 0 }
             });
         }
+
+        // Filter out items where product or variant might have been deleted
+        const validItems = cart.items.filter(
+            (item: any) => item.productId && item.variantId
+        );
+
+        // Prepare items for offer calculation
+        const itemsToCheck = validItems.map((item: any) => ({
+            productId: item.productId._id,
+            variantId: item.variantId._id,
+            price: item.variantId.price // Use current price from variant
+        }));
+
+        // Fetch applicable offers
+        const itemsWithOffers = await findApplicableOffers(itemsToCheck);
+
+        let subTotal = 0;
+        let totalDiscount = 0;
+
+        // Map back to enrich items with offer data and recalculate totals
+        const enrichedItems = validItems.map((item: any, index) => {
+            const offerData = itemsWithOffers[index];
+            const currentPrice = item.variantId.price;
+            const quantity = item.quantity;
+
+            // Update priceSnapshot to current price to keep DB fresh
+            item.priceSnapshot = currentPrice;
+
+            const discountedPrice = offerData.discountedPrice ?? currentPrice;
+            const itemDiscount = (currentPrice - discountedPrice) * quantity;
+
+            subTotal += currentPrice * quantity;
+            totalDiscount += itemDiscount;
+
+            let activeOffer = null;
+            if (offerData.offers && offerData.offers.length > 0) {
+                const offer = offerData.offers[0];
+                activeOffer = {
+                    _id: offer._id,
+                    name: offer.name,
+                    type: offer.type,
+                    config: offer.config,
+                    minCartValue: offer.minCartValue,
+                    maxDiscountAmount: offer.maxDiscountAmount,
+                    isStackable: offer.isStackable
+                };
+            }
+
+            // Return enriched item object for response
+            return {
+                ...item.toObject(),
+                price: currentPrice,
+                discountedPrice: discountedPrice,
+                activeOffer,
+                savings: itemDiscount
+            };
+        });
+
+        // Update Cart totals
+        cart.subTotal = subTotal;
+        cart.discount = totalDiscount;
+        cart.total = Math.max(0, subTotal - totalDiscount);
+
+        // If items were filtered out (invalid), update the items array
+        if (validItems.length !== cart.items.length) {
+            cart.items = validItems as any;
+        }
+
+        await cart.save();
 
         return res.status(200).json({
             success: true,
             message: "Cart fetched successfully",
-            data: cart
+            data: {
+                ...cart.toObject(),
+                items: enrichedItems
+            }
         });
     } catch (error: any) {
         console.error("Get Cart Error:", error);
