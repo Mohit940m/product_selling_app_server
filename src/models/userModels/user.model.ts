@@ -12,6 +12,7 @@ export interface IUserDocument extends Document {
   isEmailVerified: boolean;
   isActive: boolean;
   isDeleted?: boolean;
+  defaultAddress?: mongoose.Types.ObjectId;
 }
 
 const userSchema = new Schema<IUserDocument>(
@@ -74,6 +75,10 @@ const userSchema = new Schema<IUserDocument>(
     isDeleted: {
       type: Boolean,
       default: false,
+    },
+    defaultAddress: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Address",
     },
   },
   {
