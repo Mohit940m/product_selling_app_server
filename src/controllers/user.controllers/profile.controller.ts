@@ -189,11 +189,85 @@ const addShippingAddress = async (req: AuthRequest, res: Response) => {
   }
 };
 
-  
+
+
+  const editShippingAddress = async (req: AuthRequest, res: Response) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({
+        success: false,
+        message: 'Authentication required.'
+      });
+    }
+    const userId = req.user._id;
+    const { addressId } = req.params;
+    const { fullName, phone, addressLine1, addressLine2, city, state, pincode, country, isDefault } = req.body;
+
+    const address = await Address.findOne({ _id: addressId, user: userId });
+
+    if (!address) {
+      return res.status(404).json({
+        success: false,
+        message: 'Address not found.'
+      });
+    }
+
+    if (fullName) address.fullName = fullName;
+    if (phone) address.phone = phone;
+    if (addressLine1) address.addressLine1 = addressLine1;
+    if (addressLine2 !== undefined) address.addressLine2 = addressLine2;
+    if (city) address.city = city;
+    if (state) address.state = state;
+    if (pincode) address.pincode = pincode;
+    if (country) address.country = country;
+
+    if (isDefault !== undefined) {
+      if (isDefault === true) {
+        await Address.updateMany(
+          { user: userId, _id: { $ne: addressId } },
+          { isDefault: false }
+        );
+        address.isDefault = true;
+        await User.findByIdAndUpdate(userId, { defaultAddress: address._id });
+      } else {
+        if (address.isDefault) {
+          await User.findOneAndUpdate({ _id: userId, defaultAddress: addressId }, { $unset: { defaultAddress: 1 } });
+        }
+        address.isDefault = false;
+      }
+    }
+
+    await address.save();
+
+    const formatatedAddress = {
+      _id: address._id,
+      fullName: address.fullName,
+      phone: address.phone,
+      addressLine1: address.addressLine1,
+      addressLine2: address.addressLine2,
+      city: address.city,
+      state: address.state,
+      pincode: address.pincode,
+      country: address.country,
+      isDefault: address.isDefault
+    };
+
+
+    return res.status(200).json({
+      success: true,
+      message: 'Address updated successfully.',
+      data: formatatedAddress
+    });
+
+  } catch (error: any) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
 
 export { 
   getUserProfile, 
   editUserProfile,
-  addShippingAddress
+  addShippingAddress,
+  editShippingAddress,
 };
 export {};
