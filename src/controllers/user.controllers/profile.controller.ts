@@ -20,7 +20,8 @@ const getUserProfile = async (req: AuthRequest, res: Response) => {
 
     // Assuming req.user is populated by the authentication middleware
     const user = await User.findById(userId)
-    .select(" name email phone profileImage dob gender  isActive isDeleted  isPhoneVerified isEmailVerified ");
+    .select(" name email phone profileImage dob gender  isActive isDeleted  isPhoneVerified isEmailVerified defaultAddress")
+    .populate("defaultAddress", "fullName phone addressLine1 addressLine2 city state pincode country isDefault");
 
     if (!user) {
       return res.status(404).json({ 
