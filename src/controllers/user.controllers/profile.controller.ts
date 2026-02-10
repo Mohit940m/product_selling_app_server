@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { v2 as cloudinary } from 'cloudinary';
 import User from '../../models/userModels/user.model.js';
+import Address from '../../models/userModels/address.model.js';
 import { AuthRequest } from '../../auth/auth.middleware.js';
 
 // Controller to handle user profile related operations
@@ -127,5 +128,72 @@ const editUserProfile = async (req: AuthRequest, res: Response) => {
   }
 };
 
-export { getUserProfile, editUserProfile };
+// add shipping address controller 
+const addShippingAddress = async (req: AuthRequest, res: Response) => {
+  try {    
+    if (!req.user) {
+      return res.status(401).json({ 
+        success: false,
+        message: 'Authentication required.'
+      });
+    }
+    const { fullName, phone, addressLine1, addressLine2, city, state, pincode, country, isDefault } = req.body;
+    const userId = req.user._id;
+    
+    // Check if this is the first address for the user
+    const addressCount = await Address.countDocuments({ user: userId });
+
+    let makeDefault = isDefault === true;
+
+    // If it's the first address, force it to be default
+    if (addressCount === 0) {
+      makeDefault = true;
+    }
+
+    // If this address is set to be default, unset any existing default address
+    if (makeDefault) {
+      await Address.updateMany(
+        { user: userId, isDefault: true },
+        { isDefault: false }
+      );
+    }
+
+    const newAddress = new Address({
+      user: userId,
+      fullName,
+      phone,
+      addressLine1,
+      addressLine2,
+      city,
+      state,
+      pincode,
+      country,
+      isDefault: makeDefault
+    });
+
+    await newAddress.save();
+
+    // Update User model if default
+    if (makeDefault) {
+      await User.findByIdAndUpdate(userId, { defaultAddress: newAddress._id });
+    }
+
+    return res.status(201).json({
+      success: true,
+      message: 'Address added successfully.',
+      data: newAddress
+    });
+
+  } catch (error: any) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+  
+
+export { 
+  getUserProfile, 
+  editUserProfile,
+  addShippingAddress
+};
 export {};

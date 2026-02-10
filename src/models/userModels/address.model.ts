@@ -35,7 +35,7 @@ const addressSchema = new Schema<IAddress>(
 );
 
 // Ensure only one default address per user
-// addressSchema.index({ user: 1, isDefault: 1 }, { unique: true, partialFilterExpression: { isDefault: true } });
+addressSchema.index({ user: 1, isDefault: 1 }, { unique: true, partialFilterExpression: { isDefault: true } });
 
 const Address = mongoose.model<IAddress>("Address", addressSchema);
 
