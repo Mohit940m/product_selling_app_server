@@ -1,4 +1,5 @@
 import mongoose, { Schema, Document } from "mongoose";
+import { clearProductCache } from "../../config/redis.js"
 
 const OFFER_TYPES = [
   "BUY_GET",
@@ -132,5 +133,17 @@ const offerSchema = new Schema(
 
 offerSchema.index({ type: 1 });
 offerSchema.index({ validFrom: 1, validTill: 1 });
+
+offerSchema.post("save", async function () {
+  await clearProductCache();
+});
+
+offerSchema.post("findOneAndDelete", async function () {
+  await clearProductCache();
+});
+
+offerSchema.post("findOneAndUpdate", async function () {
+  await clearProductCache();
+});
 
 export default mongoose.model<IOfferDocument>("Offer", offerSchema);

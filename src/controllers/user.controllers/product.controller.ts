@@ -3,6 +3,7 @@ import { AuthRequest } from '../../auth/auth.middleware.js';
 import Product from "../../models/productModels/product.model.js";
 import Variant from "../../models/productModels/variant.model.js";
 import { findApplicableOffers } from "../../utils/offer.util.js";
+import redisClient from "../../config/redis.js"
 
 // get all products of a seller with pagination, filtering and search
 const getAllProducts = async (req: AuthRequest, res: Response) => {
@@ -19,6 +20,21 @@ const getAllProducts = async (req: AuthRequest, res: Response) => {
         const { page = 1, limit = 10, category, search, ...filters } = req.query;
         const pageNum = parseInt(page as string) || 1;
         const limitNum = parseInt(limit as string) || 10;
+
+        // Redis Cache Key Generation
+        // Format: products:category:<val>:search:<val>:page:<val>:limit:<val>:filters:<val>
+        const filterKey = Object.keys(filters).length ? `:filters:${JSON.stringify(filters)}` : '';
+        const cacheKey = `products:category:${category || 'all'}:search:${search || ''}:page:${pageNum}:limit:${limitNum}${filterKey}`;
+
+        // Check Cache
+        const cachedData = await redisClient.get(cacheKey);
+        if (cachedData) {
+            return res.status(200).json({
+                success: true,
+                message: "Products fetched successfully",
+                data: JSON.parse(cachedData)
+            });
+        }
 
         const pipeline: any[] = [];
 
@@ -153,10 +169,15 @@ const getAllProducts = async (req: AuthRequest, res: Response) => {
             };
         });
 
+        const responseData = { products, total, page: pageNum, limit: limitNum };
+
+        // Set Cache with 5 minutes expiration (300 seconds)
+        await redisClient.setEx(cacheKey, 300, JSON.stringify(responseData));
+
         return res.status(200).json({
             success: true,
             message: "Products fetched successfully",
-            data: { products, total, page: pageNum, limit: limitNum }
+            data: responseData
         });
     } catch (error: any) {
         console.error("Get All Products Error:", error);

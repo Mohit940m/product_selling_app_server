@@ -192,7 +192,7 @@ const addShippingAddress = async (req: AuthRequest, res: Response) => {
 
 
 
-  const editShippingAddress = async (req: AuthRequest, res: Response) => {
+const editShippingAddress = async (req: AuthRequest, res: Response) => {
   try {
     if (!req.user) {
       return res.status(401).json({
