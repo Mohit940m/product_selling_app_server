@@ -200,6 +200,16 @@ const getProductById = async (req: AuthRequest, res: Response) => {
         const { productId } = req.params;
         const variantId = req.headers['variant-id'] as string;
 
+        const cacheKey = `products:details:${productId}:variant:${variantId || 'default'}`;
+        const cachedData = await redisClient.get(cacheKey);
+        if (cachedData) {
+            return res.status(200).json({
+                success: true,
+                message: "Product fetched successfully",
+                data: JSON.parse(cachedData)
+            });
+        }
+
         // 1. Fetch Product
         const product = await Product.findOne({ _id: productId, isDeleted: false, isActive: true })
             .select("name description category images isFeatured variantTypes sellerId");
@@ -267,6 +277,8 @@ const getProductById = async (req: AuthRequest, res: Response) => {
                 stock: v.stock
             }))
         };
+
+        await redisClient.setEx(cacheKey, 300, JSON.stringify(responseData));
 
         return res.status(200).json({
             success: true,

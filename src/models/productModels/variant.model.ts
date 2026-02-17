@@ -1,5 +1,6 @@
 import mongoose, { Schema, Document } from "mongoose";
 import { IProductDocument } from "./product.model.js";
+import { clearProductCache } from "../../config/redis.js";
 
 export interface IVariantDocument extends Document {
   productId: mongoose.Types.ObjectId;
@@ -88,6 +89,18 @@ variantSchema.pre("validate", async function () {
   } catch (error: any) {
     throw error;
   }
+});
+
+variantSchema.post("save", async function () {
+  await clearProductCache();
+});
+
+variantSchema.post("findOneAndDelete", async function () {
+  await clearProductCache();
+});
+
+variantSchema.post("findOneAndUpdate", async function () {
+  await clearProductCache();
 });
 
 const Variant = mongoose.model<IVariantDocument>("Variant", variantSchema);
