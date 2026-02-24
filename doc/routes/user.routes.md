@@ -312,7 +312,8 @@ Adds a product to the user's shopping cart.
 **Sample Request:**
 ```json
 {
-  "productId": "64f8b...",
+  "productId":"697a69e77983d9c1cefdf91d",
+  "variantId":"697a69e77983d9c1cefdf91f",
   "quantity": 1
 }
 ```
@@ -320,11 +321,42 @@ Adds a product to the user's shopping cart.
 #### Sample Response
 ```json
 {
-  "success": true,
-  "message": "Product added to cart successfully",
-  "data": {
-    "cart": [ ... ]
-  }
+    "success": true,
+    "message": "Product added to cart successfully.",
+    "data": {
+        "_id": "6984f141537ee79db816cff1",
+        "userId": "6957d144a8a7ada527a10434",
+        "items": [
+            {
+                "productId": "697924cc247277aa1ef03f23",
+                "variantId": "697924cc247277aa1ef03f25",
+                "quantity": 1,
+                "attributes": {
+                    "Size": "M",
+                    "Color": "Red"
+                },
+                "priceSnapshot": 500,
+                "addedAt": "2026-02-05T19:36:33.985Z"
+            },
+            {
+                "productId": "697a69e77983d9c1cefdf91d",
+                "variantId": "697a69e77983d9c1cefdf91f",
+                "quantity": 2,
+                "attributes": {
+                    "Size": "32",
+                    "Color": "Blue"
+                },
+                "priceSnapshot": 2799,
+                "addedAt": "2026-02-05T20:39:54.078Z"
+            }
+        ],
+        "subTotal": 6098,
+        "discount": 500,
+        "total": 5598,
+        "createdAt": "2026-02-05T19:36:34.001Z",
+        "updatedAt": "2026-02-24T18:47:45.921Z",
+        "__v": 1
+    }
 }
 ```
 
@@ -337,15 +369,142 @@ Retrieves the user's current cart items.
 #### Sample Response
 ```json
 {
-  "success": true,
-  "message": "Cart fetched successfully",
-  "data": {
-    "items": [ ... ],
-    "totalPrice": 2000
-  }
+    "success": true,
+    "message": "Cart fetched successfully",
+    "data": {
+        "_id": "6984f141537ee79db816cff1",
+        "userId": "6957d144a8a7ada527a10434",
+        "items": [
+            {
+                "productId": {
+                    "_id": "697924cc247277aa1ef03f23",
+                    "name": "Classic T-Shirt",
+                    "category": "Men's Clothing",
+                    "images": [
+                        "https://res.cloudinary.com/dgv0uypa9/image/upload/v1769546956/e-commerce/products/dzsbr6tjae0xrh36l667.webp",
+                        "https://res.cloudinary.com/dgv0uypa9/image/upload/v1769546956/e-commerce/products/nr1dhymdx6ll4jr3d9gk.webp"
+                    ]
+                },
+                "variantId": {
+                    "_id": "697924cc247277aa1ef03f25",
+                    "sku": "TS-M-RED",
+                    "attributes": {
+                        "Size": "M",
+                        "Color": "Red"
+                    },
+                    "price": 500,
+                    "stock": 10
+                },
+                "quantity": 1,
+                "attributes": {
+                    "Size": "M",
+                    "Color": "Red"
+                },
+                "priceSnapshot": 500,
+                "addedAt": "2026-02-05T19:36:33.985Z",
+                "price": 500,
+                "discountedPrice": 500,
+                "activeOffer": null,
+                "savings": 0
+            },
+            {
+                "productId": {
+                    "_id": "697a69e77983d9c1cefdf91d",
+                    "name": "Men's 578 Blue Baggy Fit Mid Rise Jeans",
+                    "category": "Men's Clothing",
+                    "images": [
+                        "https://res.cloudinary.com/dgv0uypa9/image/upload/v1769630182/e-commerce/products/iz49zgj6vfahynwabdgy.webp",
+                        "https://res.cloudinary.com/dgv0uypa9/image/upload/v1769630182/e-commerce/products/hx67s4n860tjxq8ke496.webp",
+                        "https://res.cloudinary.com/dgv0uypa9/image/upload/v1769630182/e-commerce/products/b4iv1ta7irhsmucuhill.webp"
+                    ]
+                },
+                "variantId": {
+                    "_id": "697a69e77983d9c1cefdf91f",
+                    "sku": "DJ-32-BLUE",
+                    "attributes": {
+                        "Size": "32",
+                        "Color": "Blue"
+                    },
+                    "price": 2799,
+                    "stock": 10
+                },
+                "quantity": 1,
+                "attributes": {
+                    "Size": "32",
+                    "Color": "Blue"
+                },
+                "priceSnapshot": 2799,
+                "addedAt": "2026-02-05T20:39:54.078Z",
+                "price": 2799,
+                "discountedPrice": 2299,
+                "activeOffer": {
+                    "_id": "697a7cff8579a67c5eda1f75",
+                    "name": "Flat 500 Off",
+                    "type": "DISCOUNT",
+                    "config": {
+                        "discountType": "FLAT",
+                        "value": 500
+                    },
+                    "minCartValue": 2000,
+                    "isStackable": false
+                },
+                "savings": 500
+            }
+        ],
+        "subTotal": 3299,
+        "discount": 500,
+        "total": 2799,
+        "createdAt": "2026-02-05T19:36:34.001Z",
+        "updatedAt": "2026-02-05T20:40:04.845Z",
+        "__v": 1
+    }
 }
 ```
 
+### 3. Remove From Cart
+Removes a product from the user's shopping cart.
+
+
+- **Endpoint:** `POST /cart/remove-from-cart`
+- **Auth Type:** Bearer Token
+
+**Sample Request:**
+```json
+{ 
+    "productId":"697a69e77983d9c1cefdf91d",
+    "variantId":"697a69e77983d9c1cefdf91f"
+}
+```
+
+#### Sample Response
+```json
+{
+    "success": true,
+    "message": "Item removed from cart successfully.",
+    "data": {
+        "_id": "6984f141537ee79db816cff1",
+        "userId": "6957d144a8a7ada527a10434",
+        "items": [
+            {
+                "productId": "697a69e77983d9c1cefdf91d",
+                "variantId": "697a69e77983d9c1cefdf91f",
+                "quantity": 3,
+                "attributes": {
+                    "Size": "32",
+                    "Color": "Blue"
+                },
+                "priceSnapshot": 2799,
+                "addedAt": "2026-02-05T20:39:54.078Z"
+            }
+        ],
+        "subTotal": 8397,
+        "discount": 500,
+        "total": 7897,
+        "createdAt": "2026-02-05T19:36:34.001Z",
+        "updatedAt": "2026-02-24T18:52:37.704Z",
+        "__v": 2
+    }
+}
 ---
 
 ## Shipping
