@@ -468,6 +468,8 @@ Removes a product from the user's shopping cart.
 - **Endpoint:** `POST /cart/remove-from-cart`
 - **Auth Type:** Bearer Token
 
+#### Request Body
+
 **Sample Request:**
 ```json
 { 
@@ -505,6 +507,8 @@ Removes a product from the user's shopping cart.
         "__v": 2
     }
 }
+```
+
 ---
 
 ## Shipping
@@ -517,11 +521,11 @@ Calculates shipping cost for a destination.
 - **Content-Type:** `application/json`
 
 #### Request Body
-| Field | Type | Required | Description |
-|---|---|---|---|
-| `destinationCity` | String | Yes | City of the buyer. |
-| `destinationState` | String | Yes | State of the buyer. |
-| `productId` | String | Yes | Product ID (to identify seller config). |
+| Field              | Type   | Required | Description                  |
+|--------------------|--------|----------|------------------------------|
+| `destinationCity`  | String | Yes      | City of the buyer.           |
+| `destinationState` | String | Yes      | State of the buyer.          |
+| `productId`        | String | Yes      | Product ID (to identify seller config). |
 
 **Sample Request:**
 ```json
