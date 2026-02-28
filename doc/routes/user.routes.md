@@ -11,6 +11,7 @@ This documentation outlines the API endpoints available for Users (Buyers).
 2. Products
 3. Cart
 4. Shipping
+5. Order
 
 ---
 
@@ -546,4 +547,124 @@ Calculates shipping cost for a destination.
     "time": "2-3 Days"
   }
 }
+```
+
+---
+---
+
+## Order
+
+### 1. Checkout
+Calculates the final order summary including shipping, offers, and totals.
+
+- **Endpoint:** `POST /order/checkout`
+- **Auth Type:** Bearer Token
+- **Content-Type:** `application/json`
+
+#### Request Body
+The request body determines the shipping address used for calculation.
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `addressId` | String | No | ID of an existing address to use. |
+| `fullName` | String | No | Full name (Required if creating new address). |
+| `phone` | String | No | Phone number (Required if creating new address). |
+| `addressLine1` | String | No | Address Line 1 (Required if creating new address). |
+| `addressLine2` | String | No | Address Line 2. |
+| `city` | String | No | City (Required if creating new address). |
+| `state` | String | No | State (Required if creating new address). |
+| `pincode` | String | No | Pincode (Required if creating new address). |
+| `country` | String | No | Country (Default: India). |
+
+**Scenario 1: Use Default Address (Empty Body)**
+If the user has a default address saved, sending an empty body will use it.
+```json
+{}
+```
+
+**Scenario 2: Select Existing Address**
+Use a specific address ID from the user's saved addresses.
+```json
+{
+  "addressId": "698b969d694de382ebe5965c"
+}
+```
+
+**Scenario 3: Add New Address**
+Provide full address details to create a new address and use it for this checkout.
+```json
+{
+  "fullName": "Rahul Roy",
+  "phone": "9876543210",
+  "addressLine1": "12/A, Park Street",
+  "addressLine2": "Near Flurys",
+  "city": "Kolkata",
+  "state": "West Bengal",
+  "pincode": "700016"
+}
+```
+
+#### Sample Response
+```json
+{
+    "success": true,
+    "message": "Checkout summary calculated successfully.",
+    "data": {
+        "shippingAddress": {
+            "_id": "698b969d694de382ebe5965c",
+            "user": "6957d144a8a7ada527a10434",
+            "fullName": "Rahul Roy",
+            "phone": "9876543210",
+            "addressLine1": "12/A, Park Street",
+            "addressLine2": "Near Flurys",
+            "city": "Kolkata",
+            "state": "West Bengal",
+            "pincode": "700016",
+            "country": "India",
+            "isDefault": true,
+            "createdAt": "2026-02-10T20:35:41.912Z",
+            "updatedAt": "2026-02-10T20:45:27.729Z",
+            "__v": 0
+        },
+        "items": [
+            {
+                "productId": "697a69e77983d9c1cefdf91d",
+                "variantId": "697a69e77983d9c1cefdf91f",
+                "name": "Men's 578 Blue Baggy Fit Mid Rise Jeans",
+                "image": "https://res.cloudinary.com/dgv0uypa9/image/upload/v1769630182/e-commerce/products/iz49zgj6vfahynwabdgy.webp",
+                "quantity": 3,
+                "price": 2799,
+                "discountedPrice": 2299,
+                "total": 6897,
+                "savings": 1500,
+                "activeOffer": {
+                    "_id": "697a7cff8579a67c5eda1f75",
+                    "name": "Flat 500 Off",
+                    "type": "DISCOUNT",
+                    "config": {
+                        "discountType": "FLAT",
+                        "value": 500
+                    }
+                }
+            }
+        ],
+        "breakdown": {
+            "subTotal": 8397,
+            "discount": 1500,
+            "discountedAmount": 6897,
+            "shipping": 30,
+            "tax": 0,
+            "total": 6927
+        },
+        "shippingDetails": [
+            {
+                "sellerId": "695ead153cf7e889fd825032",
+                "cost": 30,
+                "time": "1-2 Days",
+                "type": "sameCity"
+            }
+        ]
+    }
+}
+```
 ```
