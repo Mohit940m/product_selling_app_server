@@ -7,6 +7,7 @@ import profileRoutes from "./profile.routes.js";
 import productRoutes from "./product.routes.js";
 import wishListRoutes from "./wishList.routes.js";
 import cartRoutes from "./cart.routes.js";
+import orderRoutes from "./order.routes.js";
 
 
 router.use("/auth", authRoutes);
@@ -14,6 +15,7 @@ router.use("/profile", profileRoutes);
 router.use("/products", productRoutes);
 router.use("/wishlist", wishListRoutes);
 router.use("/cart", cartRoutes);
+router.use("/orders", orderRoutes);
 
 export default router;
 export {};
