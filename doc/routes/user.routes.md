@@ -667,4 +667,79 @@ Provide full address details to create a new address and use it for this checkou
     }
 }
 ```
+
+### 2. Create Order
+Creates a pending order in the system and initiates a Razorpay payment order.
+
+- **Endpoint:** `POST /order/create-order`
+- **Auth Type:** Bearer Token
+- **Content-Type:** `application/json`
+
+#### Request Body
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `addressId` | String | No | ID of the address to ship to. If not provided, uses the user's default address. |
+
+**Sample Request:**
+```json
+{
+  "addressId": "698b969d694de382ebe5965c"
+}
+```
+
+#### Sample Response
+```json
+{
+    "success": true,
+    "message": "Order created successfully",
+    "data": {
+        "orderId": "698ce8f4981765c3653130d1",
+        "razorpayOrderId": "order_Ok92384jsdKJs",
+        "amount": 6927,
+        "currency": "INR",
+        "key": "rzp_test_...",
+        "user": {
+            "name": "Rahul Roy",
+            "email": "rahul@example.com",
+            "phone": "9876543210"
+        }
+    }
+}
+```
+
+### 3. Verify Payment
+Verifies the Razorpay payment signature and confirms the order.
+
+- **Endpoint:** `POST /order/verify-payment`
+- **Auth Type:** Bearer Token
+- **Content-Type:** `application/json`
+
+#### Request Body
+These fields come from the Razorpay client-side SDK after a successful payment.
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `razorpay_order_id` | String | Yes | Order ID returned by Razorpay. |
+| `razorpay_payment_id` | String | Yes | Payment ID returned by Razorpay. |
+| `razorpay_signature` | String | Yes | Signature hash returned by Razorpay. |
+
+**Sample Request:**
+```json
+{
+  "razorpay_order_id": "order_Ok92384jsdKJs",
+  "razorpay_payment_id": "pay_29384723khjsd",
+  "razorpay_signature": "b234827346238746283746283746287346..."
+}
+```
+
+#### Sample Response
+```json
+{
+    "success": true,
+    "message": "Payment verified and order placed successfully.",
+    "data": {
+        "orderId": "698ce8f4981765c3653130d1"
+    }
+}
+```
 ```
