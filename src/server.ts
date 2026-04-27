@@ -14,17 +14,17 @@ connectDB();
 
 const app = express();
 
+app.use(cors(
+    {
+        origin: '*',
+        methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    }
+));
+
 app.use(express.json());
 app.use('/api/v1/user', userRoutes);
 app.use('/api/v1/seller', sellerRoutes);
 app.use("/api-docs", swaggerRoutes);
-
-app.use(cors(
-    {
-        origin: '*',
-        methods: ["GET", "POST", "PUT", "PATCH", "DELETE",],
-    }
-));
 
 app.listen(port, () =>{
     console.log(`Server is running on http://localhost:${port}`);
