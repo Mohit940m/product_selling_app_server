@@ -6,6 +6,42 @@ import { v2 as cloudinary } from 'cloudinary';
 import Variant from "../../models/productModels/variant.model.js";
 import { IVariantDocument } from "../../models/productModels/variant.model.js";
 
+const createCloudinaryUploadSignature = async (req: AuthRequest, res: Response) => {
+    try {
+        if (!req.seller) {
+            return res.status(401).json({
+                success: false,
+                message: "Unauthorized. Seller not found."
+            });
+        }
+
+        const timestamp = Math.round(Date.now() / 1000);
+        const folder = "e-commerce/products";
+        const signature = cloudinary.utils.api_sign_request(
+            { timestamp, folder },
+            process.env.CLOUDINARY_API_SECRET as string
+        );
+
+        return res.status(200).json({
+            success: true,
+            message: "Cloudinary upload signature generated successfully.",
+            data: {
+                cloudName: process.env.CLOUDINARY_CLOUD_NAME,
+                apiKey: process.env.CLOUDINARY_API_KEY,
+                timestamp,
+                folder,
+                signature,
+            }
+        });
+    } catch (error: any) {
+        return res.status(500).json({
+            success: false,
+            message: "Failed to create Cloudinary upload signature.",
+            error: error.message
+        });
+    }
+};
+
 const createProduct = async (req: AuthRequest, res: Response) => {
     // Use the middleware to handle file upload before processing the body
     try {
@@ -673,6 +709,7 @@ const deleteProductPermanent = async (req: AuthRequest, res: Response) => {
 
 
 export {
+    createCloudinaryUploadSignature,
     createProduct,
     editProduct,
     editProductStatus,

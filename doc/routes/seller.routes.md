@@ -150,7 +150,35 @@ Verifies the login OTP and returns an authentication token.
 
 ## Products
 
-### 1. Create Product
+### 1. Get Cloudinary Upload Signature
+Creates a short-lived signed upload payload for direct browser uploads to Cloudinary.
+
+- **Endpoint:** `GET /products/cloudinary-signature`
+- **Auth Type:** Bearer Token
+- **Content-Type:** `application/json`
+
+#### Sample Response
+```json
+{
+  "success": true,
+  "message": "Cloudinary upload signature generated successfully.",
+  "data": {
+    "cloudName": "dgv0uypa9",
+    "apiKey": "792549837822231",
+    "timestamp": 1769545055,
+    "folder": "e-commerce/products",
+    "signature": "generated_cloudinary_signature"
+  }
+}
+```
+
+#### Frontend Flow
+1. React Admin requests this signature.
+2. React Admin uploads image files directly to Cloudinary using `file`, `api_key`, `timestamp`, `folder`, and `signature`.
+3. Cloudinary returns `secure_url` and `public_id`.
+4. React Admin sends product metadata to `POST /products/create-product` with `productImagesURL` containing the Cloudinary URLs.
+
+### 2. Create Product
 Creates a new product listing.
 
 - **Endpoint:** `POST /products/create-product`
@@ -198,7 +226,7 @@ Creates a new product listing.
 }
 ```
 
-### 2. Edit Product
+### 3. Edit Product
 Updates an existing product. Supports partial updates and image management.
 
 - **Endpoint:** `PUT /products/edit-product/:productId`
@@ -229,7 +257,7 @@ Updates an existing product. Supports partial updates and image management.
 }
 ```
 
-### 3. Edit Product Status
+### 4. Edit Product Status
 Activates or deactivates a product.
 
 - **Endpoint:** `PATCH /products/edit-product-status/:productId`
@@ -261,7 +289,7 @@ Activates or deactivates a product.
 }
 ```
 
-### 4. Increase Stock
+### 5. Increase Stock
 Adds stock to an existing product.
 
 - **Endpoint:** `PATCH /products/increase-stock/:productId`
@@ -296,7 +324,7 @@ Adds stock to an existing product.
 }
 ```
 
-### 5. Get All Products
+### 6. Get All Products
 Fetches the seller's products with pagination, search, and filtering.
 
 - **Endpoint:** `GET /products/get-all-products`
@@ -324,7 +352,7 @@ Fetches the seller's products with pagination, search, and filtering.
 }
 ```
 
-### 6. Get Product By ID
+### 7. Get Product By ID
 Fetches details of a specific product.
 
 - **Endpoint:** `GET /products/get-product/:productId`

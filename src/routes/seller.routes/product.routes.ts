@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { 
+    createCloudinaryUploadSignature,
     createProduct, 
     editProduct,
     editProductStatus,
@@ -18,6 +19,7 @@ import { handleProductImageUpload } from "../../middlewares/imageUploadHandler.j
 
 const router = Router();
 
+router.get('/cloudinary-signature', authenticateSeller, createCloudinaryUploadSignature);
 router.post('/create-product', authenticateSeller, handleProductImageUpload, createProduct);
 router.put('/edit-product/:productId', authenticateSeller, handleProductImageUpload, editProduct);
 router.patch('/edit-product-status/:productId', authenticateSeller, editProductStatus);
