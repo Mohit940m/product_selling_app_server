@@ -163,7 +163,8 @@ Creates a new product listing.
 | `name` | String | Yes | Name of the product. |
 | `description` | String | Yes | Detailed description. |
 | `category` | String | Yes | Product category. |
-| `images` | File[] | Yes | At least one image file. |
+| `productImages` | File[] | No | Product image files (Required if `productImagesURL` is empty). |
+| `productImagesURL` | Text/JSON | No | Product image URLs (Required if `productImages` is empty). |
 | `variantTypes` | Text (JSON String) | Yes | Product varientes. |
 | `variants` | Text (JSON String) | Yes | Product varientes. |
 

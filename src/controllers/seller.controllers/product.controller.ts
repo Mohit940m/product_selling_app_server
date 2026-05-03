@@ -18,7 +18,7 @@ const createProduct = async (req: AuthRequest, res: Response) => {
         }
         const sellerId = req.seller._id;
 
-        let { name, description, category, variantTypes, variants } = req.body;
+        let { name, description, category, variantTypes, variants, productImagesURL } = req.body;
 
         // Validation
         const missingFields = [];
@@ -35,17 +35,35 @@ const createProduct = async (req: AuthRequest, res: Response) => {
             });
         }
 
-        // Check for uploaded images
+        // Handle Images: Prefer uploaded files, fallback to URLs
         const files = (req as any).files as Express.Multer.File[];
-        if (!files || files.length === 0) {
-            return res.status(400).json({
-                success: false,
-                message: "At least one product image is required."
-            });
+        let images: string[] = [];
+
+        if (files && files.length > 0) {
+            images = files.map((file) => file.path);
+        } else if (productImagesURL) {
+            // Parse JSON stringified array if provided as a string, or use directly if array
+            if (typeof productImagesURL === 'string') {
+                if (productImagesURL.trim().startsWith('[') && productImagesURL.trim().endsWith(']')) {
+                    try {
+                        images = JSON.parse(productImagesURL);
+                    } catch (err) {
+                        images = [productImagesURL];
+                    }
+                } else {
+                    images = [productImagesURL];
+                }
+            } else if (Array.isArray(productImagesURL)) {
+                images = productImagesURL;
+            }
         }
 
-        // Extract image URLs
-        const images = files.map((file) => file.path);
+        if (images.length === 0) {
+            return res.status(400).json({
+                success: false,
+                message: "At least one product image is required (file upload or URL)."
+            });
+        }
 
         // Parse JSON strings if coming from form-data
         try {
