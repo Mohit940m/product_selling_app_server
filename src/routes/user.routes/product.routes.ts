@@ -3,13 +3,13 @@ import {
     getAllProducts,
     getProductById,
 } from '../../controllers/user.controllers/product.controller.js';
-import {authenticateUser} from '../../auth/auth.middleware.js';
+import { optionalAuthUser } from '../../auth/auth.middleware.js';
 
 
 const router = Router();
 
-router.get('/get-all-products', authenticateUser, getAllProducts);
-router.get('/get-product/:productId', authenticateUser, getProductById);
+router.get('/get-all-products', optionalAuthUser, getAllProducts);
+router.get('/get-product/:productId', optionalAuthUser, getProductById);
 
 
 export default router;

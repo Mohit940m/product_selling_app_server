@@ -5,17 +5,9 @@ import Variant from "../../models/productModels/variant.model.js";
 import { findApplicableOffers } from "../../utils/offer.util.js";
 import redisClient from "../../config/redis.js"
 
-// get all products of a seller with pagination, filtering and search
+// get all products with pagination, filtering and search (public)
 const getAllProducts = async (req: AuthRequest, res: Response) => {
     try {
-        // Ensure seller is authenticated
-        if (!req.user) {
-            return res.status(401).json({
-                success: false,
-                message: "Unauthorized. Seller not found."
-            });
-        }
-        
         // Extract standard params, treat the rest as attribute filters
         const { page = 1, limit = 10, category, search, ...filters } = req.query;
         const pageNum = parseInt(page as string) || 1;
@@ -191,12 +183,6 @@ const getAllProducts = async (req: AuthRequest, res: Response) => {
 
 const getProductById = async (req: AuthRequest, res: Response) => {
     try {
-        if (!req.user) {
-            return res.status(401).json({
-                success: false,
-                message: "Unauthorized. User not found."
-            });
-        }
         const { productId } = req.params;
         const variantId = req.headers['variant-id'] as string;
 

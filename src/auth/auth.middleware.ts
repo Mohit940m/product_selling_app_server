@@ -133,4 +133,40 @@ const authenticateSeller = async (
   }
 };
 
-export { authenticateUser, authenticateSeller };
+const optionalAuthUser = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const authHeader = req.headers.authorization;
+
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return next();
+    }
+
+    const token = authHeader.split(" ")[1];
+
+    let decoded: JwtPayload;
+    try {
+      decoded = jwt.verify(token, JWT_SECRET as string) as JwtPayload;
+    } catch {
+      return next();
+    }
+
+    const userId = decoded.userId || decoded.id || decoded._id;
+    if (!userId) return next();
+
+    const user = await User.findById(userId).select("isActive isDeleted").lean();
+    if (user && user.isActive && !user.isDeleted) {
+      req.user = user;
+    }
+
+    next();
+  } catch (error) {
+    console.error("Optional Auth Middleware Error:", error);
+    next();
+  }
+};
+
+export { authenticateUser, authenticateSeller, optionalAuthUser };
