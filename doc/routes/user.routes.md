@@ -8,10 +8,11 @@ This documentation outlines the API endpoints available for Users (Buyers).
 
 ## Table of Contents
 1. Authentication
-2. Products
-3. Cart
-4. Shipping
-5. Order
+2. Profile
+3. Products
+4. Cart
+5. Shipping
+6. Order
 
 ---
 
@@ -146,6 +147,161 @@ Verifies the login OTP and returns an authentication token.
   "success": true,
   "message": "User logged in successfully.",
   "token": "eyJhbGciOiJIUzI1NiIsInR..."
+}
+```
+
+---
+
+## Profile
+
+### 1. Get User Profile
+Returns the authenticated user's profile details including their default address.
+
+- **Endpoint:** `GET /profile`
+- **Auth Type:** Bearer Token
+
+#### Sample Response
+```json
+{
+  "success": true,
+  "data": {
+    "_id": "6957d144a8a7ada527a10434",
+    "name": "Jane Doe",
+    "email": "jane.doe@example.com",
+    "phone": "9876543210",
+    "profileImage": "https://cdn.pixabay.com/.../icon-7797704_640.png",
+    "dob": "1995-06-15T00:00:00.000Z",
+    "gender": "female",
+    "isEmailVerified": true,
+    "isPhoneVerified": false,
+    "defaultAddress": {
+      "_id": "698b969d694de382ebe5965c",
+      "fullName": "Jane Doe",
+      "phone": "9876543210",
+      "addressLine1": "12/A, Park Street",
+      "addressLine2": "Near Flurys",
+      "city": "Kolkata",
+      "state": "West Bengal",
+      "pincode": "700016",
+      "country": "India",
+      "isDefault": true
+    }
+  }
+}
+```
+
+### 2. Edit User Profile
+Updates the authenticated user's profile. Supports optional profile image upload via `multipart/form-data`. Only the fields provided are updated.
+
+- **Endpoint:** `PUT /profile`
+- **Auth Type:** Bearer Token
+- **Content-Type:** `multipart/form-data`
+
+#### Request Fields
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `name` | String | No | Full name. |
+| `email` | String | No | Email address (must be unique). |
+| `phone` | String | No | Phone number (must be unique). |
+| `dob` | String (ISO date) | No | Date of birth (e.g. `1995-06-15`). |
+| `gender` | String | No | `male`, `female`, or `other`. |
+| `profileImage` | File | No | Profile photo (uploaded to Cloudinary). |
+
+#### Sample Response
+```json
+{
+  "success": true,
+  "message": "Profile updated successfully.",
+  "data": { ... }
+}
+```
+
+### 3. Add Shipping Address
+Adds a new shipping address for the user. If it's the user's first address, it is automatically set as default.
+
+- **Endpoint:** `POST /profile/address`
+- **Auth Type:** Bearer Token
+- **Content-Type:** `application/json`
+
+#### Request Body
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `fullName` | String | Yes | Recipient full name. |
+| `phone` | String | Yes | Contact phone number. |
+| `addressLine1` | String | Yes | Street / house number. |
+| `addressLine2` | String | No | Landmark, area. |
+| `city` | String | Yes | City. |
+| `state` | String | Yes | State. |
+| `pincode` | String | Yes | Pincode. |
+| `country` | String | No | Country (default: `India`). |
+| `isDefault` | Boolean | No | Set this as the default address. |
+
+**Sample Request:**
+```json
+{
+  "fullName": "Jane Doe",
+  "phone": "9876543210",
+  "addressLine1": "12/A, Park Street",
+  "addressLine2": "Near Flurys",
+  "city": "Kolkata",
+  "state": "West Bengal",
+  "pincode": "700016",
+  "isDefault": true
+}
+```
+
+#### Sample Response
+```json
+{
+  "success": true,
+  "message": "Address added successfully.",
+  "data": {
+    "_id": "698b969d694de382ebe5965c",
+    "fullName": "Jane Doe",
+    "phone": "9876543210",
+    "addressLine1": "12/A, Park Street",
+    "city": "Kolkata",
+    "state": "West Bengal",
+    "pincode": "700016",
+    "country": "India",
+    "isDefault": true
+  }
+}
+```
+
+### 4. Edit Shipping Address
+Updates an existing address by its ID.
+
+- **Endpoint:** `PUT /profile/address/:addressId`
+- **Auth Type:** Bearer Token
+- **Content-Type:** `application/json`
+
+#### URL Parameters
+| Param | Description |
+|---|---|
+| `addressId` | MongoDB `_id` of the address to update. |
+
+#### Request Body
+All fields are optional — only the provided fields are updated.
+
+| Field | Type | Description |
+|---|---|---|
+| `fullName` | String | Recipient full name. |
+| `phone` | String | Contact phone number. |
+| `addressLine1` | String | Street / house number. |
+| `addressLine2` | String | Landmark, area. |
+| `city` | String | City. |
+| `state` | String | State. |
+| `pincode` | String | Pincode. |
+| `country` | String | Country. |
+| `isDefault` | Boolean | Set as default (`true`) or remove default status (`false`). |
+
+#### Sample Response
+```json
+{
+  "success": true,
+  "message": "Address updated successfully.",
+  "data": { ... }
 }
 ```
 
