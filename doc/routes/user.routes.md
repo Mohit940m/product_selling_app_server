@@ -89,23 +89,24 @@ Verifies the OTP sent during registration and logs the user in.
 ```
 
 ### 3. Login User
-Initiates the login process by verifying credentials and sending an OTP.
+Initiates the login process by looking up the user and sending an OTP. No password is required — the user is identified by email or phone number only.
 
 - **Endpoint:** `POST /auth/login`
 - **Auth Type:** None
 - **Content-Type:** `application/json`
 
 #### Request Body
+At least one of `email` or `phone` must be provided.
+
 | Field | Type | Required | Description |
 |---|---|---|---|
-| `email` | String | Yes | Registered email address. |
-| `password` | String | Yes | Password. |
+| `email` | String | No | Registered email address (required if `phone` not provided). |
+| `phone` | String | No | Registered phone number (required if `email` not provided). |
 
 **Sample Request:**
 ```json
 {
-  "email": "jane.doe@example.com",
-  "password": "securePassword123"
+  "email": "jane.doe@example.com"
 }
 ```
 
