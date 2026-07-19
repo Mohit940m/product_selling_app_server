@@ -3,7 +3,7 @@ import { AuthRequest } from '../../auth/auth.middleware.js';
 import Product from "../../models/productModels/product.model.js";
 import Variant from "../../models/productModels/variant.model.js";
 import { findApplicableOffers } from "../../utils/offer.util.js";
-import redisClient from "../../config/redis.js"
+import { getCache, setCache } from "../../config/redis.js"
 
 // get all products with pagination, filtering and search (public)
 const getAllProducts = async (req: AuthRequest, res: Response) => {
@@ -19,7 +19,7 @@ const getAllProducts = async (req: AuthRequest, res: Response) => {
         const cacheKey = `products:category:${category || 'all'}:search:${search || ''}:page:${pageNum}:limit:${limitNum}${filterKey}`;
 
         // Check Cache
-        const cachedData = await redisClient.get(cacheKey);
+        const cachedData = await getCache(cacheKey);
         if (cachedData) {
             return res.status(200).json({
                 success: true,
@@ -164,7 +164,7 @@ const getAllProducts = async (req: AuthRequest, res: Response) => {
         const responseData = { products, total, page: pageNum, limit: limitNum };
 
         // Set Cache with 5 minutes expiration (300 seconds)
-        await redisClient.setEx(cacheKey, 300, JSON.stringify(responseData));
+        await setCache(cacheKey, JSON.stringify(responseData), 300);
 
         return res.status(200).json({
             success: true,
@@ -187,7 +187,7 @@ const getProductById = async (req: AuthRequest, res: Response) => {
         const variantId = req.headers['variant-id'] as string;
 
         const cacheKey = `products:details:${productId}:variant:${variantId || 'default'}`;
-        const cachedData = await redisClient.get(cacheKey);
+        const cachedData = await getCache(cacheKey);
         if (cachedData) {
             return res.status(200).json({
                 success: true,
@@ -264,7 +264,7 @@ const getProductById = async (req: AuthRequest, res: Response) => {
             }))
         };
 
-        await redisClient.setEx(cacheKey, 300, JSON.stringify(responseData));
+        await setCache(cacheKey, JSON.stringify(responseData), 300);
 
         return res.status(200).json({
             success: true,
