@@ -167,7 +167,7 @@ const editProduct = async (req: AuthRequest, res: Response) => {
         const sellerId = req.seller._id;
         const { productId } = req.params;
 
-        const { name, description, category, imagesToDelete } = req.body;
+        const { name, description, category, imagesToDelete, productImagesURL } = req.body;
 
         const product = await Product.findOne({ _id: productId, sellerId });
 
@@ -219,9 +219,32 @@ const editProduct = async (req: AuthRequest, res: Response) => {
             await Promise.all(deletePromises);
         }
 
-        // 2. Handle New Image Uploads
+        // 2. Handle New Image Uploads: prefer uploaded files, fallback to
+        // client-uploaded Cloudinary URLs — mirrors createProduct's
+        // handling. The seller admin app uploads new images directly to
+        // Cloudinary and sends the resulting URLs as `productImagesURL`
+        // rather than raw files, so without this fallback every new image
+        // added during an edit was silently dropped (req.files was always
+        // empty for that flow, and the URLs were never read).
         const files = (req as any).files as Express.Multer.File[];
-        const newImages = files ? files.map((file) => file.path) : [];
+        let newImages: string[] = [];
+        if (files && files.length > 0) {
+            newImages = files.map((file) => file.path);
+        } else if (productImagesURL) {
+            if (typeof productImagesURL === 'string') {
+                if (productImagesURL.trim().startsWith('[') && productImagesURL.trim().endsWith(']')) {
+                    try {
+                        newImages = JSON.parse(productImagesURL);
+                    } catch (err) {
+                        newImages = [productImagesURL];
+                    }
+                } else {
+                    newImages = [productImagesURL];
+                }
+            } else if (Array.isArray(productImagesURL)) {
+                newImages = productImagesURL;
+            }
+        }
 
         // 3. Check Image Count Limit (Max 5)
         if (updatedImages.length + newImages.length > 5) {
