@@ -5,6 +5,7 @@ import Product from "../../models/productModels/product.model.js";
 import { v2 as cloudinary } from 'cloudinary';
 import Variant from "../../models/productModels/variant.model.js";
 import { IVariantDocument } from "../../models/productModels/variant.model.js";
+import { escapeRegex } from "../../utils/regex.util.js";
 
 const createCloudinaryUploadSignature = async (req: AuthRequest, res: Response) => {
     try {
@@ -528,7 +529,7 @@ const getAllProducts = async (req: AuthRequest, res: Response) => {
             query.category = category;
         }
         if (search) {
-            query.name = { $regex: new RegExp(search as string, 'i') };
+            query.name = { $regex: new RegExp(escapeRegex(search as string), 'i') };
         }
 
         // Fetch products with populated variants

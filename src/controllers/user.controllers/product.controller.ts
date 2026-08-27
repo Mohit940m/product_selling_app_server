@@ -3,6 +3,7 @@ import { AuthRequest } from '../../auth/auth.middleware.js';
 import Product from "../../models/productModels/product.model.js";
 import Variant from "../../models/productModels/variant.model.js";
 import { findApplicableOffers } from "../../utils/offer.util.js";
+import { escapeRegex } from "../../utils/regex.util.js";
 import { getCache, setCache } from "../../config/redis.js"
 
 // get all products with pagination, filtering and search (public)
@@ -37,7 +38,7 @@ const getAllProducts = async (req: AuthRequest, res: Response) => {
             matchStage.category = category;
         }
         if (search) {
-            matchStage.name = { $regex: new RegExp(search as string, 'i') };
+            matchStage.name = { $regex: new RegExp(escapeRegex(search as string), 'i') };
         }
 
         pipeline.push({ $match: matchStage });
@@ -65,7 +66,7 @@ const getAllProducts = async (req: AuthRequest, res: Response) => {
                         // Convert attribute value to string and handle missing keys safely
                         input: { $toString: { $ifNull: [`$$variant.attributes.${key}`, ""] } },
                         // Exact match, case-insensitive (e.g., "m" matches "M")
-                        regex: new RegExp(`^${String(val)}$`, "i")
+                        regex: new RegExp(`^${escapeRegex(String(val))}$`, "i")
                     }
                 });
             }
