@@ -12,6 +12,10 @@ const sellerOtpSchema = new Schema<ISellerOtp>(
       type: String, // phone or email
       required: true,
       index: true,
+      // Same non-unique-index-plus-upsert race as userModels/otp.model.ts
+      // — see the comment there for the full explanation and why a
+      // unique index isn't applied here without visibility into whether
+      // this live collection already has duplicate identifiers.
     },
 
     otpHash: {
