@@ -46,8 +46,13 @@ const authenticateUser = async (
       return res.status(401).json({ success: false, message: "Invalid token payload" });
     }
 
+    // `email` is included alongside the authorization fields because
+    // order.controller.ts's createOrder reads req.user.email to prefill
+    // the Razorpay checkout modal — without it here, that field was
+    // always undefined (silently blank prefill on every checkout), since
+    // a .select() with only inclusions returns nothing else beyond _id.
     const user = await User.findById(userId)
-    .select(" isActive isDeleted ")
+    .select(" isActive isDeleted email ")
     .lean();
 
     if (!user) {
