@@ -500,9 +500,32 @@ const verifyPayment = async (req: AuthRequest, res: Response) => {
         );
 
         // 3. Deduct Stock & Clear Cart
+        //
+        // createOrder re-checks stock right before payment starts, but that
+        // check and this deduction are separated by however long the buyer
+        // takes in the Razorpay modal — two concurrent buyers for the last
+        // unit can both pass that check and both pay successfully. Guard
+        // the actual deduction with stock: { $gte: quantity } so it can
+        // never take stock negative, rather than the unconditional $inc
+        // this used to be. If it doesn't match (oversold), the order stays
+        // PAID/CONFIRMED exactly as it would have anyway — the customer has
+        // already been charged, so silently failing the order here would
+        // leave them charged with nothing to show for it, which is worse.
+        // This only stops the data corruption (negative stock); deciding
+        // what to actively do about an oversold unit (refund, backorder,
+        // notify the seller) is a business-policy call outside this fix's
+        // scope, logged here so it's at least visible instead of silent.
         if (order) {
             for (const item of order.items) {
-                await Variant.findByIdAndUpdate(item.variantId, { $inc: { stock: -item.quantity } });
+                const updated = await Variant.findOneAndUpdate(
+                    { _id: item.variantId, stock: { $gte: item.quantity } },
+                    { $inc: { stock: -item.quantity } }
+                );
+                if (!updated) {
+                    console.error(
+                        `Stock oversold: order ${order._id} paid for ${item.quantity} unit(s) of variant ${item.variantId}, but insufficient stock remained to deduct. Order stays PAID/CONFIRMED; needs manual seller follow-up.`
+                    );
+                }
             }
             await Cart.findOneAndDelete({ userId: order.user });
         }
