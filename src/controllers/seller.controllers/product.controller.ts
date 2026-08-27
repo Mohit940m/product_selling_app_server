@@ -350,6 +350,16 @@ const increaseStock = async (req: AuthRequest, res: Response) => {
                 message: "Variant ID is required to increase stock."
             });
         }
+        // Nothing previously checked addedStock's type or sign — a negative
+        // value would pass straight through to $inc below and silently
+        // decrement stock instead of increasing it, despite this endpoint's
+        // name and the frontend's own addedStock > 0 assumption.
+        if (typeof addedStock !== "number" || !Number.isFinite(addedStock) || addedStock <= 0) {
+            return res.status(400).json({
+                success: false,
+                message: "addedStock must be a positive number."
+            });
+        }
 
         // Verify product ownership first
         const product = await Product.findOne({ _id: productId, sellerId: req.seller._id });
@@ -357,7 +367,7 @@ const increaseStock = async (req: AuthRequest, res: Response) => {
             return res.status(404).json({ success: false, message: "Product not found or unauthorized." });
         }
 
-        // Update the variant stock using atomic update 
+        // Update the variant stock using atomic update
         const variant = await Variant.findOneAndUpdate(
             { _id: variantId, productId },
             { $inc: { stock: addedStock } },
@@ -401,6 +411,12 @@ const editVariantPrice = async (req: AuthRequest, res: Response) => {
             return res.status(400).json({
                 success: false,
                 message: "Variant ID and price are required."
+            });
+        }
+        if (typeof price !== "number" || !Number.isFinite(price) || price <= 0) {
+            return res.status(400).json({
+                success: false,
+                message: "Price must be a positive number."
             });
         }
 

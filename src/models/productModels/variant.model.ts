@@ -33,12 +33,13 @@ const variantSchema = new Schema(
       required: true
     },
 
-    price: { 
-        type: Number, 
-        required: true 
+    price: {
+        type: Number,
+        required: true,
+        min: [0.01, 'Price must be greater than 0']
     },
 
-    stock: { type: Number, default: 0 },
+    stock: { type: Number, default: 0, min: [0, 'Stock cannot be negative'] },
     isActive: { type: Boolean, default: true }
   },
   { timestamps: true }
