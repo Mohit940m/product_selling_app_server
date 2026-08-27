@@ -145,20 +145,33 @@ export class AuthController {
         });
       }
 
-      const user = await User.findOne({ $or: [{ email }, { phone }] });
+      // Build $or from only the identifiers actually supplied — an
+      // unconditional { $or: [{ email }, { phone }] } would include
+      // { email: undefined } whenever only phone was given, and Mongoose/
+      // the Mongo driver drop keys with an undefined value from a filter,
+      // turning that branch into {} — which matches every document. That
+      // silently degraded a phone-only lookup into "find the first user
+      // in the collection," regardless of whether their phone matched at
+      // all. Mirrors the conditional-push pattern registerUser already
+      // uses correctly for its own uniqueness check, above.
+      const loginConditions: Record<string, string>[] = [];
+      if (email) loginConditions.push({ email });
+      if (phone) loginConditions.push({ phone });
+
+      const user = await User.findOne({ $or: loginConditions });
       if (!user) {
-        return res.status(404).json({ 
+        return res.status(404).json({
             success: false,
-            message: 'User not found.' 
+            message: 'User not found.'
         });
       }
 
       const identifier = email || phone;
       const otp = await OtpService.generateOtp(identifier);
 
-      return res.status(200).json({ 
+      return res.status(200).json({
         success: true,
-        message: 'OTP sent for login.' 
+        message: 'OTP sent for login.'
       , otp }); // Send OTP back for testing/demo purposes
     } catch (error: any) {
       return res.status(500).json({ 
@@ -198,7 +211,15 @@ export class AuthController {
         });
       }
 
-        const user = await User.findOne({ $or: [{ email }, { phone }] });
+        // Same conditional-$or fix as loginUser above — critical here
+        // specifically, since this lookup's result is who gets issued the
+        // auth token. An unconditional $or with an undefined identifier
+        // would have authenticated the caller as an arbitrary user.
+        const verifyConditions: Record<string, string>[] = [];
+        if (email) verifyConditions.push({ email });
+        if (phone) verifyConditions.push({ phone });
+
+        const user = await User.findOne({ $or: verifyConditions });
 
         if (!user) {
             return res.status(404).json({ success: false, message: 'User not found.' });
