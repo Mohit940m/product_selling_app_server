@@ -61,6 +61,12 @@ const createOffer = async (req: AuthRequest, res: Response) => {
                 message: "Invalid validTill date: must be in the future."
             });
         }
+        if (validFrom && validTill && new Date(validTill) <= new Date(validFrom)) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid date range: validTill must be after validFrom."
+            });
+        }
 
         // 1.2 If no specific variant IDs are provided, then applyToAllVariants is true
         if (!appliesTo.variantIds || appliesTo.variantIds.length === 0) {
