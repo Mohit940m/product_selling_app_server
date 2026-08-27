@@ -21,5 +21,3 @@ router.post('/calculate-shipping-cost', authenticateSeller, calculateShippingCos
 
 export default router;
 export {};
-
-//# sourceMappingURL=shipping.routes.js.map
