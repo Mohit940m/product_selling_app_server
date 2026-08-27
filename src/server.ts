@@ -7,6 +7,7 @@ import cors from 'cors';
 import userRoutes from './routes/user.routes/userRoute.js';
 import sellerRoutes from './routes/seller.routes/sellerRoute.js';
 import swaggerRoutes from './config/swagger.js';
+import { redisEnabled } from './config/redis.js';
 
 const port = process.env.PORT;
 
@@ -28,4 +29,5 @@ app.use("/api-docs", swaggerRoutes);
 
 app.listen(port, () =>{
     console.log(`Server is running on http://localhost:${port}`);
+    console.log(`Redis cache: ${redisEnabled ? 'enabled' : 'disabled'}`);
 })
