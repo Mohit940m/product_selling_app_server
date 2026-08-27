@@ -298,15 +298,18 @@ const editProductStatus = async (req: AuthRequest, res: Response) => {
                 message: "Unauthorized. Seller not found."
             });
         }
-        // const sellerId = req.seller._id;
         const { status } = req.body;
         const { productId } = req.params;
 
-        const product = await Product.findById(productId);
+        // Scoped by sellerId, matching every other product-write function
+        // in this file. This previously used a bare findById with no
+        // ownership check at all, letting any authenticated seller
+        // activate/deactivate any other seller's product.
+        const product = await Product.findOne({ _id: productId, sellerId: req.seller._id });
         if (!product) {
             return res.status(404).json({
                 success: false,
-                message: "Product not found"
+                message: "Product not found or unauthorized."
             });
         }
 
@@ -472,19 +475,29 @@ const editVariantStatus = async (req: AuthRequest, res: Response) => {
                 message: "Unauthorized. Seller not found."
             });
         }
-        // const sellerId = req.seller._id;
         const { status, variantId } = req.body;
         const { productId } = req.params;
 
-        const product = await Product.findById(productId);
+        // Scoped by sellerId, matching every other product-write function
+        // in this file. This previously used a bare findById with no
+        // ownership check at all, letting any authenticated seller
+        // activate/deactivate any other seller's variant.
+        const product = await Product.findOne({ _id: productId, sellerId: req.seller._id });
         if (!product) {
             return res.status(404).json({
                 success: false,
-                message: "Product not found"
+                message: "Product not found or unauthorized."
             });
         }
 
-        const variant = await Variant.findById({ _id: variantId , productId: productId });
+        // findById takes a single id value, not a filter object — passing
+        // { _id: variantId, productId } here nested the whole object
+        // *as* the _id condition instead of matching on two separate
+        // fields, so this could never match a real document (confirmed
+        // empirically: the cast query came out as
+        // {"_id":{"_id":...,"productId":...}}). This endpoint 404'd
+        // unconditionally regardless of whether the variant existed.
+        const variant = await Variant.findOne({ _id: variantId, productId });
         if (!variant) {
             return res.status(404).json({
                 success: false,
@@ -589,11 +602,16 @@ const getProductById = async (req: AuthRequest, res: Response) => {
         }
         const { productId } = req.params;
 
-        const product = await Product.findById(productId);
+        // Scoped by sellerId, matching every other function in this file
+        // (editProduct, addVariant, editVariantPrice, deleteProduct, ...).
+        // This previously used a bare findById with no ownership check at
+        // all, letting any authenticated seller view any other seller's
+        // product details, stock, and pricing just by guessing an ID.
+        const product = await Product.findOne({ _id: productId, sellerId: req.seller._id });
         if (!product) {
             return res.status(404).json({
                 success: false,
-                message: "Product not found"
+                message: "Product not found or unauthorized."
             });
         }
 
