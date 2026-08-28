@@ -536,7 +536,16 @@ const getAllProducts = async (req: AuthRequest, res: Response) => {
         }
         const { page = 1, limit = 10, category, search } = req.query;
 
-        let query: any = { isDeleted: false };
+        // Was missing entirely: without this, every seller's product list
+        // returned every OTHER seller's products too — a cross-tenant data
+        // leak on the primary landing page of the seller's product
+        // management flow, not a narrow/guess-an-id case like the other
+        // authorization gaps fixed earlier this session. Every mutation
+        // endpoint (editProductStatus, deleteProduct, etc.) already scopes
+        // correctly by sellerId, so this specifically affected what a
+        // seller could *see* in their own product list, not what they
+        // could successfully edit/delete.
+        let query: any = { isDeleted: false, sellerId: req.seller._id };
 
         if (category) {
             query.category = category;
