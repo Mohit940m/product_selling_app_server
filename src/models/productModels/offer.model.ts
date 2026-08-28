@@ -122,6 +122,19 @@ const offerSchema = new Schema(
     validFrom: { type: Date, required: true },
     validTill: { type: Date, required: true },
 
+    // Neither of these is currently enforced anywhere — createOffer
+    // accepts and stores them, but findApplicableOffers/calculateBestPrice
+    // (src/utils/offer.util.ts) never reads them, so an offer applies an
+    // unlimited number of times, to the same buyer repeatedly, for its
+    // entire validity window regardless of what a seller sets here. A
+    // real fix needs more than a read-side check: Order/OrderItem
+    // (src/models/orderModels/order.model.ts) doesn't currently record
+    // which offer (if any) was applied to a line item at all — only the
+    // final priceAtPurchase — so enforcement would first need that
+    // tracking added, then an atomic usage-count check at order-creation
+    // time (the same class of concurrency concern as the stock-oversell
+    // fix in verifyPayment). Left as a known gap rather than a partial,
+    // unsafe implementation.
     usageLimit: Number,
     perUserLimit: Number,
 
