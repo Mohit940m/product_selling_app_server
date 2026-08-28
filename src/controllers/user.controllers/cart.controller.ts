@@ -176,8 +176,19 @@ const getCart = async (req: AuthRequest, res: Response) => {
             price: item.variantId.price // Use current price from variant
         }));
 
+        // Raw (pre-discount) subtotal, computed before the offers lookup so
+        // a minCartValue-gated offer can be checked against the real cart
+        // total rather than each item's own price — see the comment on
+        // calculateBestPrice in offer.util.ts for why that distinction
+        // matters. This doesn't depend on which offers apply, so it's
+        // safe to compute first.
+        const rawSubtotal = validItems.reduce(
+            (sum: number, item: any) => sum + item.variantId.price * item.quantity,
+            0
+        );
+
         // Fetch applicable offers
-        const itemsWithOffers = await findApplicableOffers(itemsToCheck);
+        const itemsWithOffers = await findApplicableOffers(itemsToCheck, rawSubtotal);
 
         let subTotal = 0;
         let totalDiscount = 0;

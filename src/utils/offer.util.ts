@@ -14,7 +14,10 @@ export interface IOfferCheckItem {
  * Optimized utility to find applicable offers for a list of items.
  * Uses Maps to reduce complexity from O(N*M) to O(N) where N is items and M is offers.
  */
-export const findApplicableOffers = async (items: IOfferCheckItem[]): Promise<IOfferCheckItem[]> => {
+export const findApplicableOffers = async (
+  items: IOfferCheckItem[],
+  cartTotal?: number
+): Promise<IOfferCheckItem[]> => {
   if (!items || items.length === 0) return [];
 
   const productIds = items.map((item) => item.productId);
@@ -83,23 +86,35 @@ export const findApplicableOffers = async (items: IOfferCheckItem[]): Promise<IO
     return {
       ...item,
       offers: Array.from(uniqueOffersMap.values()),
-      discountedPrice: calculateBestPrice(item.price, Array.from(uniqueOffersMap.values()))
+      discountedPrice: calculateBestPrice(item.price, Array.from(uniqueOffersMap.values()), cartTotal)
     };
   });
 };
 
 /**
- * Helper to calculate the best price given a list of offers
+ * Helper to calculate the best price given a list of offers.
+ *
+ * `cartTotal`, when supplied by the caller, is the real cart/order
+ * subtotal to check `minCartValue` against. Without it, this falls back
+ * to gating on `originalPrice` alone (this single item's price) — a
+ * caller with no real cart context (e.g. a product browsing/listing
+ * page, where there's no cart yet) has nothing better to check against,
+ * so the offer is shown speculatively based on the item's own price.
+ * Callers that *do* have a real cart (cart view, checkout, order
+ * creation) must pass it, or a "spend ₹2000+" offer would only ever
+ * apply when a single item alone exceeds the threshold — never for a
+ * cart that reaches it across several smaller items, which defeats the
+ * entire point of a cart-value-gated offer.
  */
-const calculateBestPrice = (originalPrice: number, offers: IOfferDocument[]): number => {
+const calculateBestPrice = (originalPrice: number, offers: IOfferDocument[], cartTotal?: number): number => {
   let bestPrice = originalPrice;
+  const valueToCheck = cartTotal ?? originalPrice;
 
   for (const offer of offers) {
-    // We only calculate price changes for DISCOUNT type here. 
+    // We only calculate price changes for DISCOUNT type here.
     // BUY_GET or BUNDLE usually apply at cart level logic or have complex UI requirements.
     if (offer.type === "DISCOUNT" && offer.isActive) {
-      // Check minimum cart value (treat item price as cart value for single item context)
-      if (offer.minCartValue && originalPrice < offer.minCartValue) continue;
+      if (offer.minCartValue && valueToCheck < offer.minCartValue) continue;
 
       const config = offer.config as IDiscountConfig;
       let discountAmount = 0;

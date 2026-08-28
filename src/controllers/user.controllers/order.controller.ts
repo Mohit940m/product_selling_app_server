@@ -112,6 +112,7 @@ const checkout = async (req: AuthRequest, res: Response) => {
     const validItems = [];
     const itemsToCheckForOffers = [];
     const sellerGroups = new Map<string, any[]>(); // Group items by seller for shipping
+    let rawSubtotal = 0; // Pre-discount subtotal — doesn't depend on which offers apply
 
     for (const item of cart.items) {
       const product = item.productId as any;
@@ -128,7 +129,8 @@ const checkout = async (req: AuthRequest, res: Response) => {
       }
 
       validItems.push(item);
-      
+      rawSubtotal += variant.price * item.quantity;
+
       // Prepare for offer calculation
       itemsToCheckForOffers.push({
         productId: product._id,
@@ -152,7 +154,10 @@ const checkout = async (req: AuthRequest, res: Response) => {
     }
 
     // 5. Calculate Offers
-    const itemsWithOffers = await findApplicableOffers(itemsToCheckForOffers);
+    // rawSubtotal is passed so a minCartValue-gated offer is checked
+    // against the real cart total, not each item's own price — see the
+    // comment on calculateBestPrice in offer.util.ts.
+    const itemsWithOffers = await findApplicableOffers(itemsToCheckForOffers, rawSubtotal);
 
     // 6. Calculate Financials (Subtotal, Discounts)
     let subTotal = 0;
@@ -306,6 +311,7 @@ const createOrder = async (req: AuthRequest, res: Response) => {
         const validItems = [];
         const itemsToCheckForOffers = [];
         const sellerGroups = new Map<string, any[]>();
+        let rawSubtotal = 0; // Pre-discount subtotal — doesn't depend on which offers apply
 
         for (const item of cart.items) {
             const product = item.productId as any;
@@ -322,6 +328,7 @@ const createOrder = async (req: AuthRequest, res: Response) => {
             }
 
             validItems.push(item);
+            rawSubtotal += variant.price * item.quantity;
             itemsToCheckForOffers.push({
                 productId: product._id,
                 variantId: variant._id,
@@ -337,8 +344,9 @@ const createOrder = async (req: AuthRequest, res: Response) => {
             return res.status(400).json({ success: false, message: "No valid items to order." });
         }
 
-        // Calculate Offers
-        const itemsWithOffers = await findApplicableOffers(itemsToCheckForOffers);
+        // Calculate Offers — rawSubtotal passed so minCartValue is checked
+        // against the real cart total, not each item's own price.
+        const itemsWithOffers = await findApplicableOffers(itemsToCheckForOffers, rawSubtotal);
 
         // Calculate Item Totals
         let subTotal = 0;
