@@ -68,8 +68,6 @@ export const clearProductCache = async () => {
         for await (const key of redisClient.scanIterator({ MATCH: 'products:*' })) {
             await redisClient.del(key);
         }
-        // Explicitly delete the master key if used, as requested
-        await redisClient.del("products:all");
         console.log("Product cache cleared.");
     } catch (error) {
         console.error("Error clearing product cache:", error);
