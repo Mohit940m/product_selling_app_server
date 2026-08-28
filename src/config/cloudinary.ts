@@ -3,6 +3,16 @@ import { v2 as cloudinary } from 'cloudinary';
 import { CloudinaryStorage } from 'multer-storage-cloudinary';
 import dotenv from 'dotenv';
 dotenv.config();
+
+// `npm audit` flags a known high-severity arbitrary-argument-injection
+// advisory in cloudinary <2.7.0 (this project is pinned to ^1.41.3).
+// Not upgraded: multer-storage-cloudinary@4.0.0 — the latest published
+// version, already in use below — has a hard peer dependency on
+// cloudinary@^1.21.0 and no newer release supporting cloudinary v2
+// exists yet. Forcing the major bump would trade this advisory for
+// immediately breaking every image upload through this file (both
+// product and profile photos). Re-check when multer-storage-cloudinary
+// ships v2 support.
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
   api_key: process.env.CLOUDINARY_API_KEY,
