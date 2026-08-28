@@ -1,4 +1,5 @@
 import { Request, Response } from "express";
+import mongoose from "mongoose";
 import { AuthRequest } from '../../auth/auth.middleware.js';
 import Product from "../../models/productModels/product.model.js";
 import Variant from "../../models/productModels/variant.model.js";
@@ -186,6 +187,19 @@ const getProductById = async (req: AuthRequest, res: Response) => {
     try {
         const { productId } = req.params;
         const variantId = req.headers['variant-id'] as string;
+
+        // A malformed id (not a valid ObjectId) would otherwise throw a
+        // Mongoose CastError inside the query below, caught by this
+        // function's own try/catch and reported as a 500 — the wrong
+        // status for "you sent a bad id." Directly reachable via the AI
+        // agent's get_product_details tool if the model ever hallucinates
+        // or mistypes a productId, not just a manually-crafted request.
+        if (!mongoose.isValidObjectId(productId)) {
+            return res.status(404).json({
+                success: false,
+                message: "Product not found"
+            });
+        }
 
         const cacheKey = `products:details:${productId}:variant:${variantId || 'default'}`;
         const cachedData = await getCache(cacheKey);
