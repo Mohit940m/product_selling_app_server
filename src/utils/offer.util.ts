@@ -111,8 +111,23 @@ const calculateBestPrice = (originalPrice: number, offers: IOfferDocument[], car
   const valueToCheck = cartTotal ?? originalPrice;
 
   for (const offer of offers) {
-    // We only calculate price changes for DISCOUNT type here.
-    // BUY_GET or BUNDLE usually apply at cart level logic or have complex UI requirements.
+    // Only DISCOUNT actually adjusts a price here. This isn't a minor
+    // gap: BUY_GET, CASHBACK, and PRODUCT_BUNDLE are all fully creatable
+    // through the seller admin app's real OffersPage UI (grepped the
+    // whole backend — the only other places these three types appear at
+    // all are the OFFER_TYPES enum and the config-shape validator in
+    // offer.model.ts; nothing computes an actual effect for any of
+    // them). A seller can save a "Buy 2 Get 1 Free" or "₹50 cashback"
+    // offer successfully, and it will show up as "applicable" in
+    // offers: [...] on cart/product responses, but a buyer's price never
+    // actually changes because of it — the offer is real data with zero
+    // functional effect. Each needs materially different logic (BUY_GET
+    // needs to identify and price a "free" unit within the cart's
+    // existing line items; CASHBACK is presumably a post-purchase credit
+    // rather than a checkout-time price change at all; PRODUCT_BUNDLE
+    // needs to detect the specific combination of items in
+    // config.bundleItems and reprice that whole group at
+    // config.bundlePrice) — not something to approximate here.
     if (offer.type === "DISCOUNT" && offer.isActive) {
       if (offer.minCartValue && valueToCheck < offer.minCartValue) continue;
 
