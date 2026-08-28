@@ -126,15 +126,19 @@ const offerSchema = new Schema(
     // accepts and stores them, but findApplicableOffers/calculateBestPrice
     // (src/utils/offer.util.ts) never reads them, so an offer applies an
     // unlimited number of times, to the same buyer repeatedly, for its
-    // entire validity window regardless of what a seller sets here. A
-    // real fix needs more than a read-side check: Order/OrderItem
-    // (src/models/orderModels/order.model.ts) doesn't currently record
-    // which offer (if any) was applied to a line item at all — only the
-    // final priceAtPurchase — so enforcement would first need that
-    // tracking added, then an atomic usage-count check at order-creation
-    // time (the same class of concurrency concern as the stock-oversell
-    // fix in verifyPayment). Left as a known gap rather than a partial,
-    // unsafe implementation.
+    // entire validity window regardless of what's set here. Currently
+    // dormant rather than actively wrong, though: the seller admin app's
+    // OffersPage has no form fields for either value at all, so no real
+    // offer created through the actual product has ever had them set to
+    // anything but undefined — this only bites a caller hitting
+    // create-offer directly. A real fix needs more than a read-side
+    // check: Order/OrderItem (src/models/orderModels/order.model.ts)
+    // doesn't currently record which offer (if any) was applied to a
+    // line item at all — only the final priceAtPurchase — so enforcement
+    // would first need that tracking added, then an atomic usage-count
+    // check at order-creation time (the same class of concurrency
+    // concern as the stock-oversell fix in verifyPayment). Left as a
+    // known gap rather than a partial, unsafe implementation.
     usageLimit: Number,
     perUserLimit: Number,
 
