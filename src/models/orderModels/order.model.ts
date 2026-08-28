@@ -101,6 +101,20 @@ const orderSchema = new Schema<IOrderDocument>(
     orderId: {
       type: String,
       required: true,
+      // A real, higher-stakes cousin of the sku collision risk documented
+      // on variant.model.ts: this is a SEPARATE unique constraint from
+      // Mongo's own _id (which already has strong, purpose-built collision
+      // resistance) — Date.now() (millisecond resolution) plus a 0-9999
+      // random value gives only ~10,000 possibilities for any two orders
+      // that happen to be created in the same millisecond, which genuinely
+      // concurrent checkout traffic (a flash sale, say) could hit. Used as
+      // the Razorpay `receipt` value in createOrder, so it's not purely
+      // cosmetic. A collision throws a raw Mongo duplicate-key error out
+      // of newOrder.save() in createOrder, surfaced as a generic 500 to a
+      // paying customer mid-checkout, with no retry. Not changed here —
+      // e.g. swapping to a crypto-random suffix, or retrying generation on
+      // a duplicate-key error — since, like the sku case, picking the
+      // actual strategy is a real decision, not a one-line fix.
       unique: true,
       default: () => `ORD-${Date.now()}-${Math.floor(Math.random() * 10000)}`,
     },
