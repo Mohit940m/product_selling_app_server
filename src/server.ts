@@ -23,6 +23,17 @@ app.use(cors(
 ));
 
 app.use(express.json());
+
+// No rate-limiting exists anywhere in this API — every route, including
+// /auth/login, /auth/register, and their OTP-verify counterparts, accepts
+// unlimited requests from a single caller. Genuinely worth adding before
+// any real deployment (Redis is already a first-class piece of this stack
+// for product caching, so a Redis-backed limiter — falling open the same
+// way src/config/redis.ts's cache helpers already do when Redis is
+// disabled/unreachable, rather than blocking all traffic — would be a
+// natural fit). Not added here: picking actual limits per route and an
+// IP- vs. user-scoped strategy is a real product/ops decision, not a
+// one-line fix, so this is left as a documented gap rather than guessed.
 app.use('/api/v1/user', userRoutes);
 app.use('/api/v1/seller', sellerRoutes);
 app.use("/api-docs", swaggerRoutes);
