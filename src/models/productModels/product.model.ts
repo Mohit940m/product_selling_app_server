@@ -83,6 +83,24 @@ productSchema.post("deleteOne", { document: false, query: true }, async function
   await clearProductCache();
 });
 
+// Neither index existed before — every product-list query in the app ran
+// as a full collection scan filtered in memory, not a genuine correctness
+// bug (results were always right) but a real, worsening-at-scale
+// performance gap on the two most-hit read paths in the app.
+//
+// Seller-side getAllProducts filters { sellerId, isDeleted } on every
+// dashboard/product-list load for every seller — this compound index
+// serves that shape directly (and, via the leftmost-prefix rule, a
+// sellerId-only query too).
+productSchema.index({ sellerId: 1, isDeleted: 1 });
+
+// User-facing storefront getAllProducts filters { isDeleted, isActive }
+// plus an optional category on every browse-page load. The optional
+// unanchored $regex name search can't use a standard index either way
+// (only a text index or an anchored regex would benefit), so this index
+// is aimed at the far more common no-search-term browse/category case.
+productSchema.index({ isDeleted: 1, isActive: 1, category: 1 });
+
 const Product = mongoose.model<IProductDocument>('Product', productSchema);
 
 export default Product;
