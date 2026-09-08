@@ -391,6 +391,25 @@ const createOrder = async (req: AuthRequest, res: Response) => {
         const totalAmount = subTotal - totalDiscount + shippingCost;
 
         // 4. Create Order Document
+        //
+        // Known gap, not fixed here: this unconditionally creates a new
+        // Order + Razorpay order + Payment on every call, with no reuse of
+        // an existing pending one for the same cart. A buyer who opens the
+        // Razorpay modal and then closes it without paying — completely
+        // normal behavior, not just a network glitch — and clicks
+        // "Place Order & Pay" again gets a second CREATED/PENDING
+        // Order+Payment pair for the same cart; nothing ever cleans up or
+        // dedupes the first. This doesn't double-charge anyone (Razorpay
+        // only charges on an actual completed payment, and verifyPayment
+        // is now idempotent per-payment — see the guard added above in
+        // this same session) and there's currently no order-listing
+        // endpoint for either the user or seller side, so these orphaned
+        // records aren't visibly surfaced anywhere today. A real fix needs
+        // a product decision this isn't safe to guess at: how stale a
+        // pending order must be before it's reusable vs. abandoned outright
+        // (Razorpay orders themselves also expire), and whether stale ones
+        // should be actively cleaned up. Left as a documented gap rather
+        // than a partial, unreviewed idempotency-key implementation.
         const newOrder = new Order({
             user: userId,
             items: orderItems,
