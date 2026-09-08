@@ -1,4 +1,5 @@
 import { Response } from "express";
+import mongoose from "mongoose";
 import { AuthRequest } from "../../auth/auth.middleware.js";
 import Offer from "../../models/productModels/offer.model.js";
 import Product from "../../models/productModels/product.model.js";
@@ -206,5 +207,106 @@ const getSellerOffers = async (req: AuthRequest, res: Response) => {
     }
 };
 
-export { createOffer, getSellerOffers };
+const editOfferStatus = async (req: AuthRequest, res: Response) => {
+    try {
+        if (!req.seller) {
+            return res.status(401).json({
+                success: false,
+                message: "Unauthorized. Seller not found."
+            });
+        }
+
+        const { offerId } = req.params;
+        const { isActive } = req.body;
+
+        if (!mongoose.isValidObjectId(offerId)) {
+            return res.status(400).json({
+                success: false,
+                message: "A valid offerId is required."
+            });
+        }
+        if (typeof isActive !== "boolean") {
+            return res.status(400).json({
+                success: false,
+                message: "isActive must be a boolean."
+            });
+        }
+
+        // Scoped by sellerId, matching every other seller-write function in
+        // this codebase — an unscoped findByIdAndUpdate here would let any
+        // authenticated seller enable/disable another seller's offer.
+        const offer = await Offer.findOneAndUpdate(
+            { _id: offerId, sellerId: req.seller._id },
+            { isActive },
+            { new: true }
+        );
+
+        if (!offer) {
+            return res.status(404).json({
+                success: false,
+                message: "Offer not found or unauthorized."
+            });
+        }
+
+        return res.status(200).json({
+            success: true,
+            message: `Offer ${isActive ? "enabled" : "disabled"} successfully.`,
+            data: offer
+        });
+    } catch (error: any) {
+        console.error("Edit Offer Status Error:", error);
+        return res.status(500).json({
+            success: false,
+            message: "Internal server error",
+            error: error.message
+        });
+    }
+};
+
+const deleteOffer = async (req: AuthRequest, res: Response) => {
+    try {
+        if (!req.seller) {
+            return res.status(401).json({
+                success: false,
+                message: "Unauthorized. Seller not found."
+            });
+        }
+
+        const { offerId } = req.params;
+
+        if (!mongoose.isValidObjectId(offerId)) {
+            return res.status(400).json({
+                success: false,
+                message: "A valid offerId is required."
+            });
+        }
+
+        // Real delete, not a soft one — unlike Product, Offer has no
+        // isDeleted field, and (per the usageLimit dormancy note on the
+        // model) no Order/OrderItem currently records which offer, if any,
+        // was applied to a line item, so nothing else references an Offer
+        // document by id. Safe to remove outright.
+        const offer = await Offer.findOneAndDelete({ _id: offerId, sellerId: req.seller._id });
+        if (!offer) {
+            return res.status(404).json({
+                success: false,
+                message: "Offer not found or unauthorized."
+            });
+        }
+
+        return res.status(200).json({
+            success: true,
+            message: "Offer deleted successfully."
+        });
+    } catch (error: any) {
+        console.error("Delete Offer Error:", error);
+        return res.status(500).json({
+            success: false,
+            message: "Internal server error",
+            error: error.message
+        });
+    }
+};
+
+export { createOffer, getSellerOffers, editOfferStatus, deleteOffer };
 export {};
