@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import mongoose from 'mongoose';
 import { v2 as cloudinary } from 'cloudinary';
 import User from '../../models/userModels/user.model.js';
 import Address from '../../models/userModels/address.model.js';
@@ -203,6 +204,19 @@ const editShippingAddress = async (req: AuthRequest, res: Response) => {
     const userId = req.user._id;
     const { addressId } = req.params;
     const { fullName, phone, addressLine1, addressLine2, city, state, pincode, country, isDefault } = req.body;
+
+    // A malformed addressId would otherwise reach Address.findOne
+    // unguarded, throwing a Mongoose CastError caught by this function's
+    // own try/catch and reported as a 500 — the wrong status for a bad
+    // request. Same pattern already fixed this session in cart/product/
+    // wishlist controllers; checkout/createOrder's own addressId params
+    // already had this guard, this one didn't.
+    if (!mongoose.isValidObjectId(addressId)) {
+      return res.status(400).json({
+        success: false,
+        message: 'A valid addressId is required.'
+      });
+    }
 
     const address = await Address.findOne({ _id: addressId, user: userId });
 
