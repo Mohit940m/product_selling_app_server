@@ -26,6 +26,18 @@ const addToCart = async (req: AuthRequest, res: Response) => {
             });
         }
 
+        // A malformed id here would otherwise reach Product/Variant.findOne
+        // unguarded, throwing a Mongoose CastError caught by this
+        // function's own try/catch and reported as a 500 — the wrong
+        // status for a bad request. Same pattern already fixed this
+        // session in wishList.controller.ts and the user product controller.
+        if (!mongoose.isValidObjectId(productId) || !mongoose.isValidObjectId(variantId)) {
+            return res.status(400).json({
+                success: false,
+                message: "A valid productId and variantId are required."
+            });
+        }
+
         const qty = parseInt(quantity as string);
         if (isNaN(qty) || qty < 1) {
             return res.status(400).json({
@@ -277,6 +289,12 @@ const removeFromCart = async (req: AuthRequest, res: Response) => {
             return res.status(400).json({
                 success: false,
                 message: "Product ID and Variant ID are required."
+            });
+        }
+        if (!mongoose.isValidObjectId(productId) || !mongoose.isValidObjectId(variantId)) {
+            return res.status(400).json({
+                success: false,
+                message: "A valid productId and variantId are required."
             });
         }
 
