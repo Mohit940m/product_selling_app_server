@@ -654,6 +654,31 @@ const addVariant = async (req: AuthRequest, res: Response) => {
         const { productId } = req.params;
         const { attributes, price, stock } = req.body;
 
+        // Without this, a missing/invalid field just reached Variant.create()
+        // unguarded and relied on the model's own min bounds to reject it —
+        // which they do, but as a raw Mongoose ValidationError caught by
+        // this function's generic catch block and reported as a 500,
+        // the wrong status for a client input error. Same reasoning as
+        // editVariantPrice/increaseStock's explicit guards above.
+        if (!attributes || typeof attributes !== "object" || Array.isArray(attributes) || Object.keys(attributes).length === 0) {
+            return res.status(400).json({
+                success: false,
+                message: "At least one variant attribute is required."
+            });
+        }
+        if (typeof price !== "number" || !Number.isFinite(price) || price <= 0) {
+            return res.status(400).json({
+                success: false,
+                message: "Price must be a positive number."
+            });
+        }
+        if (stock !== undefined && (typeof stock !== "number" || !Number.isFinite(stock) || stock < 0)) {
+            return res.status(400).json({
+                success: false,
+                message: "Stock cannot be negative."
+            });
+        }
+
         const product = await Product.findOne({ _id: productId, sellerId: req.seller._id });
         if (!product) {
             return res.status(404).json({
