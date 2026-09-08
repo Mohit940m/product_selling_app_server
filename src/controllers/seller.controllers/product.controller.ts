@@ -113,6 +113,47 @@ const createProduct = async (req: AuthRequest, res: Response) => {
             });
         }
 
+        // Validate every variant BEFORE creating anything. The loop below
+        // creates the Product, then each Variant one at a time with no
+        // transaction and no rollback on failure — if variant N is invalid,
+        // the Product and variants 1..N-1 are already persisted, orphaned
+        // (newProduct.variants only gets updated with the created ids after
+        // the whole loop finishes), while the client just sees a 500
+        // suggesting nothing was created. Catching bad input here, before
+        // any write happens, prevents the single most likely trigger for
+        // that partial-creation state — the same validation addVariant
+        // gained earlier this session, applied per-element. It doesn't
+        // cover a genuine mid-loop DB failure (a dropped connection, a sku
+        // collision on one variant); a real fix for that needs a
+        // transaction, which isn't added here since it'd need verifying
+        // this deployment's MongoDB actually runs as a replica set
+        // (transactions fail outright on a standalone instance) — not
+        // something to assume blind.
+        if (Array.isArray(variants)) {
+            for (let i = 0; i < variants.length; i++) {
+                const v = variants[i];
+                const attrs = v?.attributes;
+                if (!attrs || typeof attrs !== "object" || Array.isArray(attrs) || Object.keys(attrs).length === 0) {
+                    return res.status(400).json({
+                        success: false,
+                        message: `Variant ${i + 1}: at least one attribute is required.`
+                    });
+                }
+                if (typeof v?.price !== "number" || !Number.isFinite(v.price) || v.price <= 0) {
+                    return res.status(400).json({
+                        success: false,
+                        message: `Variant ${i + 1}: price must be a positive number.`
+                    });
+                }
+                if (v?.stock !== undefined && (typeof v.stock !== "number" || !Number.isFinite(v.stock) || v.stock < 0)) {
+                    return res.status(400).json({
+                        success: false,
+                        message: `Variant ${i + 1}: stock cannot be negative.`
+                    });
+                }
+            }
+        }
+
         const newProduct = await Product.create({
             name,
             description,
