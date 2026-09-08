@@ -236,14 +236,16 @@ Updates an existing product. Supports partial updates and image management.
 - **Content-Type:** `multipart/form-data`
 
 #### Request Body (Form Data)
+`price` and `stock` are per-variant, not per-product — they aren't
+edited here at all; see Increase Stock and the variant endpoints below.
+
 | Field | Type | Required | Description |
 |---|---|---|---|
 | `name` | String | No | New name. |
 | `description` | String | No | New description. |
-| `price` | Number | No | New price. |
 | `category` | String | No | New category. |
-| `stock` | Number | No | New stock count. |
-| `images` | File[] | No | New images to add (Max 5 total per product). |
+| `productImages` | File[] | No | New image files to add (Max 5 total per product, files preferred over `productImagesURL` if both are sent). |
+| `productImagesURL` | Text/JSON | No | New image URLs to add (from the admin app's direct-to-Cloudinary upload) — used only if `productImages` files aren't present. |
 | `imagesToDelete` | String/Array | No | URLs of existing images to remove. |
 
 #### Sample Response
@@ -326,7 +328,77 @@ Adds stock to an existing product.
 }
 ```
 
-### 6. Get All Products
+### 6. Edit Variant Price
+Updates the price of a single variant.
+
+- **Endpoint:** `PATCH /products/edit-variant-price/:productId`
+- **Auth Type:** Bearer Token
+- **Content-Type:** `application/json`
+
+#### Request Body
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `variantId` | String | Yes | ID of the variant. |
+| `price` | Number | Yes | New price (must be a positive number). |
+
+**Sample Request:**
+```json
+{
+    "variantId": "69791d5f2a853102922c22b3",
+    "price": 2499
+}
+```
+
+#### Sample Response
+```json
+{
+    "success": true,
+    "message": "Price updated successfully",
+    "data": {
+        "product": "69791d5f2a853102922c22b1",
+        "variantId": "69791d5f2a853102922c22b3",
+        "price": 2499,
+        "productName": "Classic T-Shirt",
+        "variant": "Size M, Color Blue"
+    }
+}
+```
+
+### 7. Edit Variant Status
+Activates or deactivates a single variant.
+
+- **Endpoint:** `PATCH /products/edit-variant-status/:productId`
+- **Auth Type:** Bearer Token
+- **Content-Type:** `application/json`
+
+#### Request Body
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `variantId` | String | Yes | ID of the variant. |
+| `status` | Boolean | Yes | `true` for active, `false` for inactive. |
+
+**Sample Request:**
+```json
+{
+    "variantId": "69791d5f2a853102922c22b3",
+    "status": false
+}
+```
+
+#### Sample Response
+```json
+{
+    "success": true,
+    "message": "Variant status updated successfully: deactivated",
+    "data": {
+        "product": "69791d5f2a853102922c22b1",
+        "isActive": false,
+        "productName": "Classic T-Shirt"
+    }
+}
+```
+
+### 8. Get All Products
 Fetches the seller's products with pagination, search, and filtering.
 
 - **Endpoint:** `GET /products/get-all-products`
@@ -354,8 +426,8 @@ Fetches the seller's products with pagination, search, and filtering.
 }
 ```
 
-### 7. Get Product By ID
-Fetches details of a specific product.
+### 9. Get Product By ID
+Fetches details of a specific product, including its variants.
 
 - **Endpoint:** `GET /products/get-product/:productId`
 - **Auth Type:** Bearer Token
@@ -365,7 +437,76 @@ Fetches details of a specific product.
 {
   "success": true,
   "message": "Product fetched successfully",
-  "data": { ... }
+  "data": { "...": "product fields", "variants": [ { "...": "variant fields" } ] }
+}
+```
+
+### 10. Add Variant
+Adds a new variant to an existing product.
+
+- **Endpoint:** `POST /products/add-variant/:productId`
+- **Auth Type:** Bearer Token
+- **Content-Type:** `application/json`
+
+#### Request Body
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `attributes` | Object | Yes | At least one key/value, e.g. `{ "Size": "M", "Color": "Blue" }`. |
+| `price` | Number | Yes | Must be a positive number. |
+| `stock` | Number | No | Must be non-negative if provided (default 0). |
+
+**Sample Request:**
+```json
+{
+    "attributes": { "Size": "L", "Color": "Red" },
+    "price": 2499,
+    "stock": 20
+}
+```
+
+#### Sample Response
+```json
+{
+    "success": true,
+    "message": "Variant added successfully",
+    "data": {
+        "_id": "69791d5f2a853102922c22b4",
+        "productId": "69791d5f2a853102922c22b1",
+        "sku": "CLA-X7Z-L-RED",
+        "attributes": { "Size": "L", "Color": "Red" },
+        "price": 2499,
+        "stock": 20,
+        "isActive": true
+    }
+}
+```
+
+### 11. Delete Product (Soft)
+Marks a product as deleted and inactive without removing it from the database.
+
+- **Endpoint:** `DELETE /products/delete-product/:productId`
+- **Auth Type:** Bearer Token
+
+#### Sample Response
+```json
+{
+  "success": true,
+  "message": "Product soft deleted successfully"
+}
+```
+
+### 12. Delete Product (Permanent)
+Permanently deletes a product, its variants, and its Cloudinary images.
+Irreversible.
+
+- **Endpoint:** `DELETE /products/delete-product-permanent/:productId`
+- **Auth Type:** Bearer Token
+
+#### Sample Response
+```json
+{
+  "success": true,
+  "message": "Product, variants, and images permanently deleted."
 }
 ```
 
