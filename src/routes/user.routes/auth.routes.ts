@@ -21,7 +21,7 @@ const router = Router();
 // Registration Flow
 /**
  * @swagger
- * /api/v1/user/register:
+ * /api/v1/user/auth/register:
  *   post:
  *     tags:
  *       - Users
@@ -49,7 +49,7 @@ router.post('/register', AuthController.registerUser);
 // Verify OTP for Registration
 /**
  * @swagger
- * /api/v1/user/verify-registration:
+ * /api/v1/user/auth/verify-registration:
  *   post:
  *     tags:
  *       - Users
