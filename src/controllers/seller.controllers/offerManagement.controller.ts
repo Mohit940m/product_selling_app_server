@@ -45,6 +45,24 @@ const createOffer = async (req: AuthRequest, res: Response) => {
             });
         }
 
+        // A malformed id in either array would otherwise reach the $in
+        // queries below (Product.countDocuments/Variant.countDocuments)
+        // unguarded, throwing a Mongoose CastError caught by this
+        // function's own try/catch and reported as a 500 — same pattern
+        // fixed everywhere else this session, applied here to array
+        // elements rather than a single id.
+        const idArraysToCheck: [string, unknown][] = [
+            ["appliesTo.productIds", appliesTo.productIds],
+            ["appliesTo.variantIds", appliesTo.variantIds],
+        ];
+        for (const [fieldName, ids] of idArraysToCheck) {
+            if (Array.isArray(ids) && ids.some((id) => !mongoose.isValidObjectId(id))) {
+                return res.status(400).json({
+                    success: false,
+                    message: `${fieldName} contains an invalid id.`
+                });
+            }
+        }
 
         // 1.1 Date Validation : Past dates are not allowed, validFrom and validTill must be in today or the future
         const today = new Date();
