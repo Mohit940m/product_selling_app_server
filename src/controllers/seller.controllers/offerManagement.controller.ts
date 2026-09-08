@@ -174,5 +174,37 @@ const createOffer = async (req: AuthRequest, res: Response) => {
     }
 };
 
-export { createOffer };
+const getSellerOffers = async (req: AuthRequest, res: Response) => {
+    try {
+        if (!req.seller) {
+            return res.status(401).json({
+                success: false,
+                message: "Unauthorized. Seller not found."
+            });
+        }
+
+        // Seller-scoped, same discipline as every other seller-side list
+        // query in this codebase (see product.controller.ts's getAllProducts
+        // fix) — an unscoped find() here would leak every seller's offers.
+        const offers = await Offer.find({ sellerId: req.seller._id })
+            .sort({ createdAt: -1 })
+            .populate('appliesTo.productIds', 'name images')
+            .populate('appliesTo.variantIds', 'sku attributes');
+
+        return res.status(200).json({
+            success: true,
+            message: "Offers fetched successfully",
+            data: offers
+        });
+    } catch (error: any) {
+        console.error("Get Seller Offers Error:", error);
+        return res.status(500).json({
+            success: false,
+            message: "Internal server error",
+            error: error.message
+        });
+    }
+};
+
+export { createOffer, getSellerOffers };
 export {};
