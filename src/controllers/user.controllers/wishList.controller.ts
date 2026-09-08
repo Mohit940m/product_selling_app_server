@@ -55,6 +55,48 @@ const addProductToWishList = async (req: AuthRequest, res: Response) => {
     }
 };  
 
+const removeProductFromWishList = async (req: AuthRequest, res: Response) => {
+    try {
+        if (!req.user) {
+            return res.status(401).json({
+                success: false,
+                message: "Unauthorized. User not found."
+            });
+        }
+
+        const { productId } = req.params;
+
+        if (!productId || !mongoose.isValidObjectId(productId)) {
+            return res.status(400).json({
+                success: false,
+                message: "A valid productId is required."
+            });
+        }
+
+        const userId = req.user._id;
+
+        const deleted = await WishList.findOneAndDelete({ userId, productId });
+        if (!deleted) {
+            return res.status(404).json({
+                success: false,
+                message: "Product not found in wishlist."
+            });
+        }
+
+        return res.status(200).json({
+            success: true,
+            message: "Product removed from wishlist successfully."
+        });
+    } catch (error: any) {
+        console.error("Remove from WishList Error:", error);
+        return res.status(500).json({
+            success: false,
+            message: "Internal server error",
+            error: error.message
+        });
+    }
+};
+
 const getWishList = async (req: AuthRequest, res: Response) => {
     try {
         if (!req.user) {
@@ -86,5 +128,6 @@ const getWishList = async (req: AuthRequest, res: Response) => {
 
 export {
     addProductToWishList,
+    removeProductFromWishList,
     getWishList,
 };
