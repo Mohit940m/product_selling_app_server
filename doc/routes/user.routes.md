@@ -10,9 +10,10 @@ This documentation outlines the API endpoints available for Users (Buyers).
 1. Authentication
 2. Profile
 3. Products
-4. Cart
-5. Shipping
-6. Order
+4. Wishlist
+5. Cart
+6. Shipping (see note in that section — not a real user-facing endpoint)
+7. Order
 
 ---
 
@@ -452,6 +453,92 @@ Fetches details of a specific product.
 
 ---
 
+## Wishlist
+
+This entire section was missing from this file — the routes are real
+and have existed since before the Kartly frontend migration; `add`
+and `list` predate this session, `remove` was added this session
+(`DELETE /remove/:productId`, previously the only gap the frontend
+had explicitly documented).
+
+### 1. Add to Wishlist
+Adds a product to the authenticated user's wishlist.
+
+- **Endpoint:** `POST /wishlist/add`
+- **Auth Type:** Bearer Token
+- **Content-Type:** `application/json`
+
+#### Request Body
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `productId` | String | Yes | ID of the product to save. |
+
+**Sample Request:**
+```json
+{
+  "productId": "697a69e77983d9c1cefdf91d"
+}
+```
+
+#### Sample Response
+```json
+{
+  "success": true,
+  "message": "Product added to wishlist successfully.",
+  "data": {
+    "userId": "6957d144a8a7ada527a10434",
+    "productId": "697a69e77983d9c1cefdf91d",
+    "addedAt": "2026-02-10T20:35:41.912Z"
+  }
+}
+```
+Returns `400` if the product is already in the wishlist, or if `productId` is missing/not a valid id.
+
+### 2. Get Wishlist
+Fetches the authenticated user's saved products.
+
+- **Endpoint:** `GET /wishlist`
+- **Auth Type:** Bearer Token
+
+#### Sample Response
+```json
+{
+  "success": true,
+  "message": "Wishlist fetched successfully",
+  "data": [
+    {
+      "userId": "6957d144a8a7ada527a10434",
+      "productId": {
+        "_id": "697a69e77983d9c1cefdf91d",
+        "name": "Men's 578 Blue Baggy Fit Mid Rise Jeans",
+        "price": 2799,
+        "category": "Jeans",
+        "images": ["https://res.cloudinary.com/.../iz49zgj6vfahynwabdgy.webp"],
+        "isFeatured": false
+      },
+      "addedAt": "2026-02-10T20:35:41.912Z"
+    }
+  ]
+}
+```
+
+### 3. Remove from Wishlist
+Removes a product from the authenticated user's wishlist.
+
+- **Endpoint:** `DELETE /wishlist/remove/:productId`
+- **Auth Type:** Bearer Token
+
+#### Sample Response
+```json
+{
+  "success": true,
+  "message": "Product removed from wishlist successfully."
+}
+```
+Returns `404` if the product isn't in the wishlist, `400` if `:productId` isn't a valid id.
+
+---
+
 ## Cart
 
 ### 1. Add to Cart
@@ -671,40 +758,22 @@ Removes a product from the user's shopping cart.
 
 ## Shipping
 
-### 1. Calculate Shipping Cost
-Calculates shipping cost for a destination.
-
-- **Endpoint:** `POST /shipping/calculate-shipping-cost`
-- **Auth Type:** Bearer Token
-- **Content-Type:** `application/json`
-
-#### Request Body
-| Field              | Type   | Required | Description                  |
-|--------------------|--------|----------|------------------------------|
-| `destinationCity`  | String | Yes      | City of the buyer.           |
-| `destinationState` | String | Yes      | State of the buyer.          |
-| `productId`        | String | Yes      | Product ID (to identify seller config). |
-
-**Sample Request:**
-```json
-{
-  "destinationCity": "Pune",
-  "destinationState": "Maharashtra",
-  "productId": "64f8b..."
-}
-```
-
-#### Sample Response
-```json
-{
-  "success": true,
-  "message": "Shipping calculated successfully.",
-  "data": {
-    "cost": 60,
-    "time": "2-3 Days"
-  }
-}
-```
+**Correction:** this section previously documented `POST
+/shipping/calculate-shipping-cost` as a user-facing endpoint taking a
+`productId` to identify the seller's config. That endpoint does not
+exist under this base URL (`/api/v1/user`) — verified directly against
+`src/routes/user.routes/userRoute.ts`, which mounts only `auth`,
+`profile`, `products`, `wishlist`, `cart`, and `orders`, no `shipping`
+route at all. The real `calculateShippingCost` controller
+(`src/controllers/seller.controllers/shipping.controller.ts`) is
+seller-only: it requires `req.seller` (not reachable with a buyer's
+token), reads `sellerId` from that authenticated session rather than a
+`productId` in the body, and is mounted at
+`POST /api/v1/seller/shipping/calculate-shipping-cost` — see
+`doc/routes/seller.routes.md` if that file documents it. A buyer-facing
+shipping-cost preview by product (as this section originally described)
+isn't implemented; `checkout` (below) is the only way a buyer currently
+sees a shipping cost, as part of the full order summary.
 
 ---
 ---
@@ -714,7 +783,7 @@ Calculates shipping cost for a destination.
 ### 1. Checkout
 Calculates the final order summary including shipping, offers, and totals.
 
-- **Endpoint:** `POST /order/checkout`
+- **Endpoint:** `POST /orders/checkout`
 - **Auth Type:** Bearer Token
 - **Content-Type:** `application/json`
 
@@ -828,7 +897,7 @@ Provide full address details to create a new address and use it for this checkou
 ### 2. Create Order
 Creates a pending order in the system and initiates a Razorpay payment order.
 
-- **Endpoint:** `POST /order/create-order`
+- **Endpoint:** `POST /orders/create-order`
 - **Auth Type:** Bearer Token
 - **Content-Type:** `application/json`
 
@@ -867,7 +936,7 @@ Creates a pending order in the system and initiates a Razorpay payment order.
 ### 3. Verify Payment
 Verifies the Razorpay payment signature and confirms the order.
 
-- **Endpoint:** `POST /order/verify-payment`
+- **Endpoint:** `POST /orders/verify-payment`
 - **Auth Type:** Bearer Token
 - **Content-Type:** `application/json`
 

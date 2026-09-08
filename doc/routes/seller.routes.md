@@ -2,7 +2,8 @@
 
 This documentation outlines the API endpoints available for Sellers.
 
-**Base URL:** `/api/v1/seller` (Assumed based on typical configuration, adjust if mounted differently)
+**Base URL:** `/api/v1/seller` (confirmed via `server.ts`'s
+`app.use('/api/v1/seller', sellerRoutes)`)
 
 ---
 
@@ -10,6 +11,7 @@ This documentation outlines the API endpoints available for Sellers.
 1. Authentication
 2. Products
 3. Shipping
+4. Offer
 
 ---
 
@@ -572,7 +574,7 @@ Calculates shipping cost for a destination based on the seller's config.
 Creates a new offer for a product.
 
 
-- **Endpoint:** `POST /offer/create-offer`
+- **Endpoint:** `POST /offers/create-offer`
 - **Auth Type:** Bearer Token
 
 #### Request Body
@@ -693,3 +695,97 @@ Creates a new offer for a product.
     }
 }
 ```
+
+**Note:** the endpoint above was documented here as `POST /offer/create-offer`
+(singular) for an unknown stretch of this file's history — the real
+mount is `/offers` (plural, `sellerRoute.ts`'s
+`router.use("/offers", offerManagementRoutes)`). Corrected above. This
+matches exactly the bug the admin frontend's `OffersPage.tsx` had (fixed
+this session, `product_selling_app_clinet_admin` commit `c509c70`) — it's
+plausible this doc's stale path is where that call site's wrong URL
+originally came from, though that's not something to confirm from here.
+
+### 2. List Offers
+Fetches all offers belonging to the authenticated seller.
+
+- **Endpoint:** `GET /offers/`
+- **Auth Type:** Bearer Token
+
+#### Sample Response
+```json
+{
+    "success": true,
+    "message": "Offers fetched successfully",
+    "data": [
+        {
+            "_id": "697fb62c65decba9b5deb132",
+            "name": "10% Off Sale",
+            "type": "DISCOUNT",
+            "appliesTo": {
+                "productIds": [
+                    { "_id": "697bcc089b9dbee534801d65", "name": "...", "images": ["..."] }
+                ],
+                "applyToAllVariants": true,
+                "variantIds": []
+            },
+            "config": { "discountType": "PERCENTAGE", "value": 10 },
+            "validFrom": "2024-01-01T00:00:00.000Z",
+            "validTill": "2024-02-01T00:00:00.000Z",
+            "isActive": true
+        }
+    ]
+}
+```
+`appliesTo.productIds`/`appliesTo.variantIds` arrive populated (name/images,
+sku/attributes respectively) — see `getSellerOffers` in
+`offerManagement.controller.ts`.
+
+### 3. Enable/Disable Offer
+Toggles an offer's `isActive` flag.
+
+- **Endpoint:** `PATCH /offers/edit-offer-status/:offerId`
+- **Auth Type:** Bearer Token
+- **Content-Type:** `application/json`
+
+#### Request Body
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `isActive` | Boolean | Yes | New status. |
+
+**Sample Request:**
+```json
+{
+  "isActive": false
+}
+```
+
+#### Sample Response
+```json
+{
+  "success": true,
+  "message": "Offer disabled successfully.",
+  "data": { "_id": "697fb62c65decba9b5deb132", "isActive": false, "...": "..." }
+}
+```
+Returns `404` if the offer doesn't exist or doesn't belong to this seller,
+`400` if `:offerId` isn't a valid id or `isActive` isn't a boolean.
+
+### 4. Delete Offer
+Permanently deletes an offer. Unlike products, offers have no soft-delete
+flag — this is a real, irreversible delete.
+
+- **Endpoint:** `DELETE /offers/delete-offer/:offerId`
+- **Auth Type:** Bearer Token
+
+#### Sample Response
+```json
+{
+  "success": true,
+  "message": "Offer deleted successfully."
+}
+```
+Returns `404` if the offer doesn't exist or doesn't belong to this seller,
+`400` if `:offerId` isn't a valid id.
+
+There is still no endpoint to edit an offer's own fields (name, config,
+dates, targets) — only its `isActive` flag and whole-document delete.
