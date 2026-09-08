@@ -1,4 +1,5 @@
 import { Response } from "express";
+import mongoose from "mongoose";
 import { AuthRequest } from "../../auth/auth.middleware.js";
 import WishList from "../../models/userModels/wishList.model.js";
 
@@ -12,6 +13,18 @@ const addProductToWishList = async (req: AuthRequest, res: Response) => {
         }
 
         const { productId } = req.body;
+
+        // A missing or malformed productId would otherwise throw a
+        // Mongoose CastError inside the findOne below, caught by this
+        // function's own try/catch and reported as a 500 — the wrong
+        // status for a bad request.
+        if (!productId || !mongoose.isValidObjectId(productId)) {
+            return res.status(400).json({
+                success: false,
+                message: "A valid productId is required."
+            });
+        }
+
         const userId = req.user._id;
 
         // Check if the product is already in the wishlist
