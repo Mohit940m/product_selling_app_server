@@ -472,6 +472,25 @@ const verifyPayment = async (req: AuthRequest, res: Response) => {
             return res.status(400).json({ success: false, message: "Payment details missing." });
         }
 
+        // Idempotency guard: nothing before this fix stopped verifyPayment
+        // from running its full body more than once for the same order — a
+        // network retry, a double-fired Razorpay `handler` callback, or the
+        // same request simply replayed with the same (still-valid)
+        // signature would each re-run the stock-deduction loop below,
+        // decrementing stock again for an order that was already paid and
+        // already had its stock taken the first time. If this payment is
+        // already PAID, that work has already happened once — return
+        // success without repeating it, rather than re-verifying and
+        // re-deducting.
+        const existingPayment = await Payment.findOne({ razorpayOrderId: razorpay_order_id });
+        if (existingPayment?.status === PAYMENT_STATUS.PAID) {
+            return res.status(200).json({
+                success: true,
+                message: "Payment already verified.",
+                data: { orderId: existingPayment.orderId }
+            });
+        }
+
         // 1. Verify Signature
         const generated_signature = crypto
             .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET || "")
