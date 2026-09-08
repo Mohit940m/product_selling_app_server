@@ -209,6 +209,10 @@ const editProduct = async (req: AuthRequest, res: Response) => {
         const sellerId = req.seller._id;
         const { productId } = req.params;
 
+        if (!mongoose.isValidObjectId(productId)) {
+            return res.status(400).json({ success: false, message: "A valid productId is required." });
+        }
+
         const { name, description, category, imagesToDelete, productImagesURL } = req.body;
 
         const product = await Product.findOne({ _id: productId, sellerId });
@@ -342,6 +346,10 @@ const editProductStatus = async (req: AuthRequest, res: Response) => {
         const { status } = req.body;
         const { productId } = req.params;
 
+        if (!mongoose.isValidObjectId(productId)) {
+            return res.status(400).json({ success: false, message: "A valid productId is required." });
+        }
+
         // Scoped by sellerId, matching every other product-write function
         // in this file. This previously used a bare findById with no
         // ownership check at all, letting any authenticated seller
@@ -389,10 +397,10 @@ const increaseStock = async (req: AuthRequest, res: Response) => {
         const { productId } = req.params;
         const { addedStock, variantId } = req.body;
 
-        if (!variantId) {
+        if (!mongoose.isValidObjectId(productId) || !mongoose.isValidObjectId(variantId)) {
             return res.status(400).json({
                 success: false,
-                message: "Variant ID is required to increase stock."
+                message: "A valid productId and variantId are required."
             });
         }
         // Nothing previously checked addedStock's type or sign — a negative
@@ -452,10 +460,16 @@ const editVariantPrice = async (req: AuthRequest, res: Response) => {
         const { productId } = req.params;
         const { price, variantId } = req.body;
 
-        if (!variantId || price === undefined) {
+        if (!mongoose.isValidObjectId(productId) || !mongoose.isValidObjectId(variantId)) {
             return res.status(400).json({
                 success: false,
-                message: "Variant ID and price are required."
+                message: "A valid productId and variantId are required."
+            });
+        }
+        if (price === undefined) {
+            return res.status(400).json({
+                success: false,
+                message: "Price is required."
             });
         }
         if (typeof price !== "number" || !Number.isFinite(price) || price <= 0) {
@@ -518,6 +532,16 @@ const editVariantStatus = async (req: AuthRequest, res: Response) => {
         }
         const { status, variantId } = req.body;
         const { productId } = req.params;
+
+        // variantId previously had no presence or format check at all here
+        // (unlike editVariantPrice/increaseStock, which at least checked
+        // presence) before reaching the Variant.findOne below.
+        if (!mongoose.isValidObjectId(productId) || !mongoose.isValidObjectId(variantId)) {
+            return res.status(400).json({
+                success: false,
+                message: "A valid productId and variantId are required."
+            });
+        }
 
         // Scoped by sellerId, matching every other product-write function
         // in this file. This previously used a bare findById with no
@@ -652,6 +676,10 @@ const getProductById = async (req: AuthRequest, res: Response) => {
         }
         const { productId } = req.params;
 
+        if (!mongoose.isValidObjectId(productId)) {
+            return res.status(400).json({ success: false, message: "A valid productId is required." });
+        }
+
         // Scoped by sellerId, matching every other function in this file
         // (editProduct, addVariant, editVariantPrice, deleteProduct, ...).
         // This previously used a bare findById with no ownership check at
@@ -694,6 +722,10 @@ const addVariant = async (req: AuthRequest, res: Response) => {
         }
         const { productId } = req.params;
         const { attributes, price, stock } = req.body;
+
+        if (!mongoose.isValidObjectId(productId)) {
+            return res.status(400).json({ success: false, message: "A valid productId is required." });
+        }
 
         // Without this, a missing/invalid field just reached Variant.create()
         // unguarded and relied on the model's own min bounds to reject it —
@@ -755,6 +787,10 @@ const deleteProduct = async (req: AuthRequest, res: Response) => {
         }
         const { productId } = req.params;
 
+        if (!mongoose.isValidObjectId(productId)) {
+            return res.status(400).json({ success: false, message: "A valid productId is required." });
+        }
+
         const product = await Product.findOne({ _id: productId, sellerId: req.seller._id });
 
         if (!product) {
@@ -792,6 +828,10 @@ const deleteProductPermanent = async (req: AuthRequest, res: Response) => {
             });
         }
         const { productId } = req.params;
+
+        if (!mongoose.isValidObjectId(productId)) {
+            return res.status(400).json({ success: false, message: "A valid productId is required." });
+        }
 
         const product = await Product.findOne({ _id: productId, sellerId: req.seller._id });
 
