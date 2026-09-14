@@ -588,4 +588,77 @@ const verifyPayment = async (req: AuthRequest, res: Response) => {
     }
 };
 
-export { checkout, createOrder, verifyPayment };
+const MAX_ORDERS_PAGE_SIZE = 50;
+
+// createOrder writes a PENDING order before the Razorpay modal opens, so every
+// abandoned or retried checkout leaves one behind; hide those unless asked.
+const getMyOrders = async (req: AuthRequest, res: Response) => {
+    try {
+        if (!req.user) {
+            return res.status(401).json({ success: false, message: "Unauthorized. User not found." });
+        }
+
+        const pageNum = Math.max(parseInt(req.query.page as string) || 1, 1);
+        const limitNum = Math.min(Math.max(parseInt(req.query.limit as string) || 10, 1), MAX_ORDERS_PAGE_SIZE);
+        const includeUnpaid = req.query.includeUnpaid === "true";
+
+        const filter: Record<string, unknown> = { user: req.user._id };
+        if (!includeUnpaid) {
+            filter.paymentStatus = { $in: ["PAID", "REFUNDED"] };
+        }
+
+        const [orders, total] = await Promise.all([
+            Order.find(filter)
+                .sort({ createdAt: -1 })
+                .skip((pageNum - 1) * limitNum)
+                .limit(limitNum)
+                .select("-appliedOffer")
+                .lean(),
+            Order.countDocuments(filter),
+        ]);
+
+        return res.status(200).json({
+            success: true,
+            data: orders,
+            pagination: {
+                total,
+                page: pageNum,
+                limit: limitNum,
+                totalPages: Math.ceil(total / limitNum),
+            },
+        });
+    } catch (error: any) {
+        console.error("Get My Orders Error:", error);
+        return res.status(500).json({ success: false, message: "Internal server error", error: error.message });
+    }
+};
+
+// Accepts either the Mongo _id (what verify-payment returns) or the ORD-... orderId.
+const getMyOrderById = async (req: AuthRequest, res: Response) => {
+    try {
+        if (!req.user) {
+            return res.status(401).json({ success: false, message: "Unauthorized. User not found." });
+        }
+
+        const { orderId } = req.params;
+        if (!orderId) {
+            return res.status(400).json({ success: false, message: "orderId is required." });
+        }
+
+        const idFilter = mongoose.isValidObjectId(orderId) ? { _id: orderId } : { orderId };
+        const order = await Order.findOne({ ...idFilter, user: req.user._id })
+            .select("-appliedOffer")
+            .lean();
+
+        if (!order) {
+            return res.status(404).json({ success: false, message: "Order not found." });
+        }
+
+        return res.status(200).json({ success: true, data: order });
+    } catch (error: any) {
+        console.error("Get My Order Error:", error);
+        return res.status(500).json({ success: false, message: "Internal server error", error: error.message });
+    }
+};
+
+export { checkout, createOrder, verifyPayment, getMyOrders, getMyOrderById };

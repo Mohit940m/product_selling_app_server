@@ -161,5 +161,7 @@ const orderSchema = new Schema<IOrderDocument>(
   { timestamps: true }
 );
 
+orderSchema.index({ user: 1, paymentStatus: 1, createdAt: -1 });
+
 const Order = mongoose.model<IOrderDocument>("Order", orderSchema);
 export default Order;

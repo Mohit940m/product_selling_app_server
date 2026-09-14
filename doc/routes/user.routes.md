@@ -968,4 +968,64 @@ These fields come from the Razorpay client-side SDK after a successful payment.
     }
 }
 ```
+
+### 4. List My Orders
+Lists the authenticated user's orders, newest first.
+
+- **Endpoint:** `GET /orders`
+- **Auth Type:** Bearer Token
+
+#### Query Parameters
+| Param | Type | Default | Description |
+|---|---|---|---|
+| `page` | Number | `1` | Page number. |
+| `limit` | Number | `10` | Items per page (max 50). |
+| `includeUnpaid` | `"true"` | — | By default only `PAID`/`REFUNDED` orders are returned. `create-order` writes a `PENDING` order before payment, so every abandoned or retried checkout leaves one behind; pass `true` to include those (and `FAILED`) too. |
+
+#### Sample Response
+```json
+{
+    "success": true,
+    "data": [
+        {
+            "_id": "698ce8f4981765c3653130d1",
+            "orderId": "ORD-1760000000000-4821",
+            "items": [
+                {
+                    "productId": "698a...",
+                    "variantId": "698b...",
+                    "name": "Classic Tee",
+                    "image": "https://res.cloudinary.com/...",
+                    "priceAtPurchase": 499,
+                    "quantity": 2,
+                    "attributes": { "size": "M" }
+                }
+            ],
+            "shippingAddress": { "fullName": "...", "city": "Kolkata", "state": "West Bengal", "pincode": "700001", "country": "India" },
+            "paymentStatus": "PAID",
+            "orderStatus": "CONFIRMED",
+            "subTotal": 998,
+            "discount": 0,
+            "shippingCost": 50,
+            "tax": 0,
+            "totalAmount": 1048,
+            "createdAt": "2026-09-15T10:00:00.000Z"
+        }
+    ],
+    "pagination": { "total": 1, "page": 1, "limit": 10, "totalPages": 1 }
+}
 ```
+
+### 5. Get My Order
+Returns one of the authenticated user's orders. Another user's order returns 404.
+
+- **Endpoint:** `GET /orders/:orderId`
+- **Auth Type:** Bearer Token
+
+#### URL Parameters
+| Param | Description |
+|---|---|
+| `orderId` | Either the Mongo `_id` (what `verify-payment` returns) or the human-readable `ORD-...` id. |
+
+#### Sample Response
+Same shape as a single element of `data` in *List My Orders*, plus `tracking` (`courier`, `trackingId`, `trackingUrl`) when set.
