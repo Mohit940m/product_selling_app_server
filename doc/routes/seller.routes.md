@@ -12,6 +12,7 @@ This documentation outlines the API endpoints available for Sellers.
 2. Products
 3. Shipping
 4. Offer
+5. Orders
 
 ---
 
@@ -930,3 +931,56 @@ Returns `404` if the offer doesn't exist or doesn't belong to this seller,
 
 There is still no endpoint to edit an offer's own fields (name, config,
 dates, targets) — only its `isActive` flag and whole-document delete.
+
+---
+
+## Orders
+
+Read-only. An order can contain several sellers' items, so every response
+contains **only this seller's line items** plus `sellerSubtotal` (those
+lines at purchase price). The order's own `totalAmount`, `discount`,
+`shippingCost` and `tax` cover all sellers and are deliberately not
+returned. Only `PAID` and `REFUNDED` orders are visible. There is no
+endpoint to change an order's status or attach tracking yet.
+
+### 1. List Orders
+- **Endpoint:** `GET /orders`
+- **Auth Type:** Bearer Token
+
+#### Query Parameters
+| Param | Type | Default | Description |
+|---|---|---|---|
+| `page` | Number | `1` | Page number. |
+| `limit` | Number | `10` | Items per page (max 50). |
+
+#### Sample Response
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "_id": "698ce8f4981765c3653130d1",
+      "orderId": "ORD-1760000000000-4821",
+      "createdAt": "2026-09-15T10:00:00.000Z",
+      "paymentStatus": "PAID",
+      "orderStatus": "CONFIRMED",
+      "shippingAddress": { "fullName": "...", "phone": "...", "addressLine1": "...", "city": "Kolkata", "state": "West Bengal", "pincode": "700001", "country": "India" },
+      "items": [
+        { "productId": "698a...", "variantId": "698b...", "name": "Classic Tee", "image": "https://...", "priceAtPurchase": 499, "quantity": 2, "attributes": { "size": "M" } }
+      ],
+      "itemCount": 2,
+      "sellerSubtotal": 998
+    }
+  ],
+  "pagination": { "total": 1, "page": 1, "limit": 10, "totalPages": 1 }
+}
+```
+
+### 2. Get Order
+- **Endpoint:** `GET /orders/:orderId`
+- **Auth Type:** Bearer Token
+
+`:orderId` is the Mongo `_id` or the `ORD-...` id. Same shape as one
+element of `data` above, plus `tracking` when set. Returns `404` if the
+order doesn't exist, isn't paid/refunded, or contains none of this
+seller's products.
