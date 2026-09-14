@@ -7,8 +7,9 @@ import { jsonResult, runTool } from './helpers.js';
 /**
  * Authenticated buyer wishlist tools (require MCP_API_TOKEN).
  *
- * - get_wishlist     -> GET  /api/v1/user/wishlist/
- * - add_to_wishlist  -> POST /api/v1/user/wishlist/add (state-changing)
+ * - get_wishlist        -> GET    /api/v1/user/wishlist/
+ * - add_to_wishlist     -> POST   /api/v1/user/wishlist/add (state-changing)
+ * - remove_from_wishlist -> DELETE /api/v1/user/wishlist/remove/:productId (state-changing)
  */
 export function registerWishlistTools(server: McpServer): void {
   server.registerTool(
@@ -46,6 +47,27 @@ export function registerWishlistTools(server: McpServer): void {
           path: '/api/v1/user/wishlist/add',
           token: USER_TOKEN,
           body: { productId },
+        });
+        return jsonResult(data);
+      }),
+  );
+
+  server.registerTool(
+    'remove_from_wishlist',
+    {
+      title: 'Remove from wishlist',
+      description:
+        'Remove a product from the wishlist. State-changing: confirm with the user before calling.',
+      inputSchema: {
+        productId: z.string().describe('The product _id to remove.'),
+      },
+    },
+    async ({ productId }) =>
+      runTool(async () => {
+        const data = await apiRequest({
+          method: 'DELETE',
+          path: `/api/v1/user/wishlist/remove/${encodeURIComponent(productId)}`,
+          token: USER_TOKEN,
         });
         return jsonResult(data);
       }),

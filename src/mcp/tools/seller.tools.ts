@@ -9,9 +9,10 @@ import { jsonResult, runTool } from './helpers.js';
  * real `/api/v1/seller/...` endpoint guarded by `authenticateSeller`.
  *
  * Read:  seller_list_products, seller_get_product, seller_get_shipping_config,
- *        seller_calculate_shipping
+ *        seller_calculate_shipping, seller_list_offers
  * Write: seller_increase_stock, seller_edit_variant_price,
- *        seller_edit_product_status, seller_create_offer
+ *        seller_edit_product_status, seller_create_offer,
+ *        seller_edit_offer_status, seller_delete_offer
  */
 export function registerSellerTools(server: McpServer): void {
   server.registerTool(
@@ -91,7 +92,7 @@ export function registerSellerTools(server: McpServer): void {
       inputSchema: {
         productId: z.string().describe('The product _id.'),
         variantId: z.string().describe('The variant _id.'),
-        price: z.number().nonnegative().describe('New price.'),
+        price: z.number().positive().describe('New price (must be greater than 0).'),
       },
     },
     async ({ productId, variantId, price }) =>
@@ -213,6 +214,68 @@ export function registerSellerTools(server: McpServer): void {
           path: '/api/v1/seller/offers/create-offer',
           token: SELLER_TOKEN,
           body: args,
+        });
+        return jsonResult(data);
+      }),
+  );
+
+  server.registerTool(
+    'seller_list_offers',
+    {
+      title: 'Seller: list offers',
+      description: "List the authenticated seller's promotional offers.",
+      inputSchema: {},
+    },
+    async () =>
+      runTool(async () => {
+        const data = await apiRequest({
+          method: 'GET',
+          path: '/api/v1/seller/offers/',
+          token: SELLER_TOKEN,
+        });
+        return jsonResult(data);
+      }),
+  );
+
+  server.registerTool(
+    'seller_edit_offer_status',
+    {
+      title: 'Seller: enable/disable offer',
+      description:
+        "Enable or disable one of the seller's offers. State-changing: confirm with the user before calling.",
+      inputSchema: {
+        offerId: z.string().describe('The offer _id.'),
+        isActive: z.boolean().describe('true to enable, false to disable.'),
+      },
+    },
+    async ({ offerId, isActive }) =>
+      runTool(async () => {
+        const data = await apiRequest({
+          method: 'PATCH',
+          path: `/api/v1/seller/offers/edit-offer-status/${encodeURIComponent(offerId)}`,
+          token: SELLER_TOKEN,
+          body: { isActive },
+        });
+        return jsonResult(data);
+      }),
+  );
+
+  server.registerTool(
+    'seller_delete_offer',
+    {
+      title: 'Seller: delete offer',
+      description:
+        "Permanently delete one of the seller's offers. State-changing: confirm with the user before calling — this cannot be undone.",
+      inputSchema: {
+        offerId: z.string().describe('The offer _id.'),
+      },
+    },
+    async ({ offerId }) =>
+      runTool(async () => {
+        const data = await apiRequest({
+          method: 'DELETE',
+          path: `/api/v1/seller/offers/delete-offer/${encodeURIComponent(offerId)}`,
+          token: SELLER_TOKEN,
         });
         return jsonResult(data);
       }),

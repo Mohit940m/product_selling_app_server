@@ -93,6 +93,7 @@ Tools are grouped by audience. Each wraps existing controller logic or a propose
 | `remove_from_cart` | Remove an item from the cart. | `removeFromCart` — `POST /api/v1/user/cart/remove-from-cart` |
 | `get_wishlist` | List the user's wishlist. | `getWishList` — `GET /api/v1/user/wishlist/` |
 | `add_to_wishlist` | Add a product to the wishlist. | `addProductToWishList` — `POST /api/v1/user/wishlist/add` |
+| `remove_from_wishlist` | Remove a product from the wishlist. | `removeProductFromWishList` — `DELETE /api/v1/user/wishlist/remove/:productId` |
 | `get_profile` | Get the authenticated user's profile. | `getUserProfile` — `GET /api/v1/user/profile` |
 | `list_my_orders` *(proposal — needs new controller/route)* | List the current user's orders with status. | New read endpoint over `Order` model filtered by `user` |
 | `get_order` *(proposal — needs new controller/route)* | Get a single order (status, items, tracking) by `orderId`. | New read endpoint over `Order` + `Payment` models |
@@ -109,6 +110,9 @@ Tools are grouped by audience. Each wraps existing controller logic or a propose
 | `seller_get_shipping_config` | Read the seller's shipping zones/rates. | `getShippingConfig` — `GET /api/v1/seller/shipping/get-shipping-config` |
 | `seller_calculate_shipping` | Calculate shipping cost to a destination. | `calculateShippingCost` — `POST /api/v1/seller/shipping/calculate-shipping-cost` |
 | `seller_create_offer` *(gate behind confirmation)* | Create a promotional offer. | `createOffer` — `POST /api/v1/seller/offers/create-offer` |
+| `seller_list_offers` | List the seller's promotional offers. | `getSellerOffers` — `GET /api/v1/seller/offers/` |
+| `seller_edit_offer_status` | Enable/disable an offer. | `editOfferStatus` — `PATCH /api/v1/seller/offers/edit-offer-status/:offerId` |
+| `seller_delete_offer` *(gate behind confirmation)* | Permanently delete an offer. | `deleteOffer` — `DELETE /api/v1/seller/offers/delete-offer/:offerId` |
 
 > Write-heavy seller tools (`create-product`, `edit-product`, `add-variant`, `delete-product`) can be added incrementally once the read tools are validated. `delete-product-permanent` stays out of scope.
 
