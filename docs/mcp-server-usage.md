@@ -55,7 +55,10 @@ work anonymously):
 - `remove_from_cart` *(write)* — `POST /api/v1/user/cart/remove-from-cart`
 - `get_wishlist` — `GET /api/v1/user/wishlist/`
 - `add_to_wishlist` *(write)* — `POST /api/v1/user/wishlist/add`
+- `remove_from_wishlist` *(write)* — `DELETE /api/v1/user/wishlist/remove/:productId`
 - `get_profile` — `GET /api/v1/user/profile`
+- `list_my_orders` — `GET /api/v1/user/orders` (paid/refunded only unless `includeUnpaid`)
+- `get_order` — `GET /api/v1/user/orders/:orderId` (Mongo `_id` or `ORD-...` id)
 
 **Seller** (use `MCP_SELLER_API_TOKEN`):
 
@@ -67,17 +70,18 @@ work anonymously):
 - `seller_get_shipping_config` — `GET /api/v1/seller/shipping/get-shipping-config`
 - `seller_calculate_shipping` — `POST /api/v1/seller/shipping/calculate-shipping-cost`
 - `seller_create_offer` *(write)* — `POST /api/v1/seller/offers/create-offer`
+- `seller_list_offers` — `GET /api/v1/seller/offers/`
+- `seller_edit_offer_status` *(write)* — `PATCH /api/v1/seller/offers/edit-offer-status/:offerId`
+- `seller_delete_offer` *(write, permanent)* — `DELETE /api/v1/seller/offers/delete-offer/:offerId`
 
 Write tools are documented as state-changing so a host can gate them behind
 confirmation.
 
 ## Not implemented (yet)
 
-- `list_my_orders` / `get_order` — the plan flags these as proposals; the REST
-  API has no "list my orders" / "get order by id" endpoint, so these tools are
-  intentionally omitted until such endpoints exist.
 - Payment execution (`create-order` / `verify-payment`), OTP auth, image
-  uploads, and destructive deletes are out of scope (see the plan, section 3).
+  uploads, and destructive product deletes are out of scope (see the plan,
+  section 3).
 - MCP resources and prompts from the plan (section 5) are not implemented in
   this version.
 

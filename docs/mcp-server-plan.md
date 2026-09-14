@@ -95,8 +95,8 @@ Tools are grouped by audience. Each wraps existing controller logic or a propose
 | `add_to_wishlist` | Add a product to the wishlist. | `addProductToWishList` — `POST /api/v1/user/wishlist/add` |
 | `remove_from_wishlist` | Remove a product from the wishlist. | `removeProductFromWishList` — `DELETE /api/v1/user/wishlist/remove/:productId` |
 | `get_profile` | Get the authenticated user's profile. | `getUserProfile` — `GET /api/v1/user/profile` |
-| `list_my_orders` *(proposal — needs new controller/route)* | List the current user's orders with status. | New read endpoint over `Order` model filtered by `user` |
-| `get_order` *(proposal — needs new controller/route)* | Get a single order (status, items, tracking) by `orderId`. | New read endpoint over `Order` + `Payment` models |
+| `list_my_orders` | List the current user's orders with status. | `getMyOrders` — `GET /api/v1/user/orders` |
+| `get_order` | Get a single order (status, items, tracking) by `_id` or `orderId`. | `getMyOrderById` — `GET /api/v1/user/orders/:orderId` |
 
 ### Seller tools (require a seller JWT)
 
@@ -187,7 +187,7 @@ src/
       cart.tools.ts        # get_cart, add_to_cart, remove_from_cart
       wishlist.tools.ts    # get_wishlist, add_to_wishlist
       profile.tools.ts     # get_profile
-      orders.tools.ts      # list_my_orders, get_order  (proposal)
+      orders.tools.ts      # list_my_orders, get_order
       seller.tools.ts      # seller_* product/shipping/offer tools
     resources/
       catalog.resource.ts  # categories, product://, docs://openapi
@@ -222,7 +222,7 @@ docs/
 ## 11. Open questions / decisions
 
 1. **Integration mode:** ship the HTTP-wrapper approach for v1, or invest upfront in refactoring controllers into reusable services (`src/services/`) for embedded direct calls?
-2. **Order read endpoints:** the REST API currently has no "list my orders" / "get order by id" endpoint. Add these thin read endpoints so `list_my_orders` / `get_order` are grounded, or defer those tools?
+2. ~~**Order read endpoints:** add thin "list my orders" / "get order by id" endpoints, or defer those tools?~~ Resolved: `GET /api/v1/user/orders` and `GET /api/v1/user/orders/:orderId` now exist and both tools are wired.
 3. **Token model:** one JWT per MCP session (single user/seller identity), or a mechanism to switch identities? How are tokens rotated given the 30-day expiry?
 4. **Seller write surface:** how far to go in v1 — read-only, or include `increase-stock` / price / status edits? Where to draw the confirmation line?
 5. **Payments:** keep entirely out of scope, or expose a **read-only** order/payment status tool (no Razorpay execution)?

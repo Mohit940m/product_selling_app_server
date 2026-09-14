@@ -4,6 +4,7 @@ import { registerProductTools } from './tools/products.tools.js';
 import { registerCartTools } from './tools/cart.tools.js';
 import { registerWishlistTools } from './tools/wishlist.tools.js';
 import { registerProfileTools } from './tools/profile.tools.js';
+import { registerOrderTools } from './tools/orders.tools.js';
 import { registerSellerTools } from './tools/seller.tools.js';
 import { API_BASE_URL } from './config.js';
 
@@ -16,9 +17,7 @@ import { API_BASE_URL } from './config.js';
  * and offer logic. Configure MCP_API_BASE_URL, MCP_API_TOKEN (buyer) and
  * MCP_SELLER_API_TOKEN (seller) in the environment.
  *
- * Only tools backed by existing endpoints are registered. The plan's
- * `list_my_orders` / `get_order` tools are intentionally omitted because no
- * corresponding REST endpoint exists yet.
+ * Only tools backed by existing endpoints are registered.
  */
 export function createMcpServer(): McpServer {
   const server = new McpServer({
@@ -31,6 +30,7 @@ export function createMcpServer(): McpServer {
   registerCartTools(server);
   registerWishlistTools(server);
   registerProfileTools(server);
+  registerOrderTools(server);
 
   // Seller tools
   registerSellerTools(server);
