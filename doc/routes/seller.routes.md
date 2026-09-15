@@ -419,7 +419,14 @@ Fetches the seller's products with pagination, search, and filtering.
   "success": true,
   "message": "Products fetched successfully",
   "data": {
-    "products": [ ... ],
+    "products": [
+      {
+        "_id": "698a...", "name": "Classic Tee", "category": "T-Shirts", "isActive": true,
+        "images": ["https://..."], "isFeatured": false,
+        "sku": "CLA-X7Z-L-RED", "price": 499,
+        "variantCount": 3, "totalStock": 42, "minVariantStock": 2
+      }
+    ],
     "total": 50,
     "page": 1,
     "limit": 10

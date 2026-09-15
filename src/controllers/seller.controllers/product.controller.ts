@@ -627,7 +627,7 @@ const getAllProducts = async (req: AuthRequest, res: Response) => {
             .populate({
                 path: "variants",
                 model: Variant, // Ensure the correct model is used for population
-                select: "sku price", // Select the required fields from the Variant model
+                select: "sku price stock", // Select the required fields from the Variant model
             })
             .exec();
 
@@ -644,7 +644,12 @@ const getAllProducts = async (req: AuthRequest, res: Response) => {
                 images: product.images,
                 isFeatured: product.isFeatured,
                 sku: firstVariant.sku || null, // Include the first variant's sku
-                price: firstVariant.price || null // Include the first variant's price
+                price: firstVariant.price || null, // Include the first variant's price
+                variantCount: product.variants.length,
+                totalStock: (product.variants as unknown as IVariantDocument[]).reduce((sum, v) => sum + (v.stock ?? 0), 0),
+                minVariantStock: product.variants.length
+                    ? Math.min(...(product.variants as unknown as IVariantDocument[]).map((v) => v.stock ?? 0))
+                    : 0,
             };
         });
 
