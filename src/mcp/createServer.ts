@@ -6,6 +6,28 @@ import { registerWishlistTools } from './tools/wishlist.tools.js';
 import { registerProfileTools } from './tools/profile.tools.js';
 import { registerOrderTools } from './tools/orders.tools.js';
 import { registerSellerTools } from './tools/seller.tools.js';
+import { registerSellerCatalogTools } from './tools/sellerCatalog.tools.js';
+import { registerSellerOrderTools } from './tools/sellerOrders.tools.js';
+
+/** Tools that change data. Clients (the agent) confirm these with the user first. */
+const WRITE_TOOLS = new Set([
+  'add_to_cart',
+  'remove_from_cart',
+  'add_to_wishlist',
+  'remove_from_wishlist',
+  'seller_increase_stock',
+  'seller_edit_variant_price',
+  'seller_edit_product_status',
+  'seller_create_offer',
+  'seller_edit_offer_status',
+  'seller_delete_offer',
+  'seller_create_product',
+  'seller_add_variant',
+  'seller_edit_variant_status',
+  'seller_update_order_item_status',
+]);
+
+const DESTRUCTIVE_TOOLS = new Set(['seller_delete_offer', 'remove_from_cart', 'remove_from_wishlist']);
 
 /**
  * MCP server for product_selling_app_server: a thin wrapper around the REST
@@ -19,6 +41,22 @@ export function createMcpServer(ctx: ToolContext, audience: McpAudience = 'all')
     version: '1.1.0',
   });
 
+  // Stamp read/write annotations centrally so the list above is the one source of truth.
+  const register = server.registerTool.bind(server);
+  server.registerTool = ((name: string, config: { annotations?: Record<string, unknown> }, cb: unknown) =>
+    (register as (...args: unknown[]) => unknown)(
+      name,
+      {
+        ...config,
+        annotations: {
+          readOnlyHint: !WRITE_TOOLS.has(name),
+          destructiveHint: DESTRUCTIVE_TOOLS.has(name),
+          ...config.annotations,
+        },
+      },
+      cb,
+    )) as typeof server.registerTool;
+
   if (audience === 'user' || audience === 'all') {
     registerProductTools(server, ctx);
     registerCartTools(server, ctx);
@@ -29,6 +67,8 @@ export function createMcpServer(ctx: ToolContext, audience: McpAudience = 'all')
 
   if (audience === 'seller' || audience === 'all') {
     registerSellerTools(server, ctx);
+    registerSellerCatalogTools(server, ctx);
+    registerSellerOrderTools(server, ctx);
   }
 
   return server;

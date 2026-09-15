@@ -40,6 +40,28 @@ export function registerOrderTools(server: McpServer, ctx: ToolContext): void {
   );
 
   server.registerTool(
+    'checkout_summary',
+    {
+      title: 'Checkout summary',
+      description:
+        "Price the current cart for checkout: items, discounts, cashback, shipping and total. Uses the user's default address unless addressId is given. Read-only; does not place an order.",
+      inputSchema: {
+        addressId: z.string().optional().describe('A saved address _id; omit to use the default address.'),
+      },
+    },
+    async ({ addressId }) =>
+      runTool(async () => {
+        const data = await apiRequest({
+          method: 'POST',
+          path: '/api/v1/user/orders/checkout',
+          token: ctx.userToken,
+          body: addressId ? { addressId } : {},
+        });
+        return jsonResult(data);
+      }),
+  );
+
+  server.registerTool(
     'get_order',
     {
       title: 'Get order',
