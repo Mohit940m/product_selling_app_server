@@ -1009,12 +1009,16 @@ Lists the authenticated user's orders, newest first.
                     "image": "https://res.cloudinary.com/...",
                     "priceAtPurchase": 499,
                     "quantity": 2,
-                    "attributes": { "size": "M" }
+                    "attributes": { "size": "M" },
+                    "subOrderId": "ORD-1760000000000-4821-1",
+                    "status": "SHIPPED",
+                    "tracking": { "courier": "Delhivery", "trackingId": "DLV123456", "trackingUrl": "https://..." },
+                    "statusUpdatedAt": "2026-09-16T09:30:00.000Z"
                 }
             ],
             "shippingAddress": { "fullName": "...", "city": "Kolkata", "state": "West Bengal", "pincode": "700001", "country": "India" },
             "paymentStatus": "PAID",
-            "orderStatus": "CONFIRMED",
+            "orderStatus": "SHIPPED",
             "subTotal": 998,
             "discount": 0,
             "cashback": 0,
@@ -1038,7 +1042,9 @@ Returns one of the authenticated user's orders. Another user's order returns 404
 #### URL Parameters
 | Param | Description |
 |---|---|
-| `orderId` | Either the Mongo `_id` (what `verify-payment` returns) or the human-readable `ORD-...` id. |
+| `orderId` | The Mongo `_id` (what `verify-payment` returns), the `ORD-...` id, or an item's `subOrderId` (returns its parent order). |
 
 #### Sample Response
-Same shape as a single element of `data` in *List My Orders*, plus `tracking` (`courier`, `trackingId`, `trackingUrl`) when set.
+Same shape as a single element of `data` in *List My Orders*.
+
+Each item is fulfilled separately: its own `subOrderId`, `status` and `tracking`, set by the seller of that product. `orderStatus` summarises the items — the least advanced stage, so it reads `DELIVERED` only once every item is delivered.

@@ -941,8 +941,13 @@ An order can contain several sellers' items, so every response contains
 purchase price). The order's own `totalAmount`, `discount`, `cashback`,
 `shippingCost` and `tax` cover all sellers and are deliberately not
 returned. Only `PAID` and `REFUNDED` orders are visible.
-`canUpdateStatus` is `true` when the order is paid and contains only
-this seller's products (see *Update Order Status*).
+
+**Every item is its own sub-order**, with its own `subOrderId`
+(`<orderId>-1`, `<orderId>-2`, ...), `status` and `tracking`, so each
+product is shipped and tracked separately even when the buyer paid for
+them together. The order's `orderStatus` summarises this seller's items:
+the least advanced stage among them. `canUpdateStatus` is `true` while
+the order is `PAID`.
 
 ### 1. List Orders
 - **Endpoint:** `GET /orders`
@@ -967,7 +972,13 @@ this seller's products (see *Update Order Status*).
       "orderStatus": "CONFIRMED",
       "shippingAddress": { "fullName": "...", "phone": "...", "addressLine1": "...", "city": "Kolkata", "state": "West Bengal", "pincode": "700001", "country": "India" },
       "items": [
-        { "productId": "698a...", "variantId": "698b...", "name": "Classic Tee", "image": "https://...", "priceAtPurchase": 499, "quantity": 2, "attributes": { "size": "M" } }
+        {
+          "subOrderId": "ORD-1760000000000-4821-1",
+          "status": "SHIPPED",
+          "tracking": { "courier": "Delhivery", "trackingId": "DLV123456", "trackingUrl": "https://www.delhivery.com/track/package/DLV123456" },
+          "statusUpdatedAt": "2026-09-16T09:30:00.000Z",
+          "productId": "698a...", "variantId": "698b...", "name": "Classic Tee", "image": "https://...", "priceAtPurchase": 499, "quantity": 2, "attributes": { "size": "M" }
+        }
       ],
       "canUpdateStatus": true,
       "itemCount": 2,
@@ -982,17 +993,18 @@ this seller's products (see *Update Order Status*).
 - **Endpoint:** `GET /orders/:orderId`
 - **Auth Type:** Bearer Token
 
-`:orderId` is the Mongo `_id` or the `ORD-...` id. Same shape as one
-element of `data` above, plus `tracking` when set. Returns `404` if the
+`:orderId` is the Mongo `_id`, the `ORD-...` id, or any item's
+`subOrderId`. Same shape as one element of `data` above. Returns `404` if the
 order doesn't exist, isn't paid/refunded, or contains none of this
 seller's products.
 
-### 3. Update Order Status
-Moves an order forward through fulfilment:
+### 3. Update Item Status
+Moves one item (sub-order) forward through fulfilment:
 `CONFIRMED → SHIPPED → OUT FOR DELIVERY → DELIVERED`. Stages can be
-skipped (e.g. `CONFIRMED → DELIVERED`) but never moved backwards.
+skipped (e.g. `CONFIRMED → DELIVERED`) but never moved backwards. Other
+items in the same order — including other sellers' — are unaffected.
 
-- **Endpoint:** `PATCH /orders/:orderId/status`
+- **Endpoint:** `PATCH /orders/:orderId/items/:subOrderId/status`
 - **Auth Type:** Bearer Token
 - **Content-Type:** `application/json`
 
@@ -1000,7 +1012,7 @@ skipped (e.g. `CONFIRMED → DELIVERED`) but never moved backwards.
 | Field | Type | Required | Description |
 |---|---|---|---|
 | `status` | String | Yes | `SHIPPED`, `OUT FOR DELIVERY` or `DELIVERED`. |
-| `tracking` | Object | No | `{ courier, trackingId, trackingUrl }`; replaces any existing tracking. `trackingUrl` must be `http(s)`. |
+| `tracking` | Object | No | `{ courier, trackingId, trackingUrl }` for this item; replaces its existing tracking. `trackingUrl` must be `http(s)`. |
 
 ```json
 {
@@ -1012,8 +1024,8 @@ skipped (e.g. `CONFIRMED → DELIVERED`) but never moved backwards.
 #### Responses
 - `200` — the updated order, same shape as *Get Order*.
 - `400` — invalid `status` or `trackingUrl`.
-- `404` — order not found, not `PAID`, or contains none of this seller's products.
-- `409` — the order also contains other sellers' items (one status covers the whole order), the target stage isn't later than the current one, or a concurrent update got there first.
+- `404` — order not found or not `PAID`, or the item doesn't exist or isn't this seller's product.
+- `409` — the target stage isn't later than the item's current one, or a concurrent update got there first.
 
-`CANCELLED` can't be set here: these orders are already paid and there is
+`CANCELLED` can't be set here: items are already paid for and there is
 no refund flow yet.

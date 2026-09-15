@@ -11,6 +11,12 @@ export const ORDER_STATUS = {
 
 export type OrderStatus = typeof ORDER_STATUS[keyof typeof ORDER_STATUS];
 
+export interface IOrderTracking {
+  courier?: string;
+  trackingId?: string;
+  trackingUrl?: string;
+}
+
 export interface IOrderProduct {
   productId: mongoose.Types.ObjectId;
   variantId: mongoose.Types.ObjectId;
@@ -19,6 +25,12 @@ export interface IOrderProduct {
   priceAtPurchase: number;
   quantity: number;
   attributes: Record<string, any>;
+  // Each line is fulfilled on its own: its own id, stage and tracking.
+  // Missing on orders created before per-item fulfilment — see fulfilment.util.ts.
+  subOrderId?: string;
+  status?: OrderStatus;
+  tracking?: IOrderTracking;
+  statusUpdatedAt?: Date;
 }
 
 export interface IOrderAddress {
@@ -52,12 +64,9 @@ export interface IOrderDocument extends Document {
   
   appliedOffer?: mongoose.Types.ObjectId;
   
-  tracking?: {
-    courier: string;
-    trackingId: string;
-    trackingUrl: string;
-  };
-  
+  // Legacy order-wide tracking; new orders track per item.
+  tracking?: IOrderTracking;
+
   createdAt: Date;
   updatedAt: Date;
 }
@@ -79,6 +88,14 @@ const orderProductSchema = new Schema<IOrderProduct>(
     priceAtPurchase: { type: Number, required: true, min: 0 },
     quantity: { type: Number, required: true, min: 1 },
     attributes: { type: Schema.Types.Mixed, required: true },
+    subOrderId: { type: String },
+    status: { type: String, enum: Object.values(ORDER_STATUS) },
+    tracking: {
+      courier: String,
+      trackingId: String,
+      trackingUrl: String,
+    },
+    statusUpdatedAt: { type: Date },
   },
   { _id: false }
 );
@@ -172,6 +189,13 @@ const orderSchema = new Schema<IOrderDocument>(
   },
   { timestamps: true }
 );
+
+orderSchema.pre("validate", function () {
+  this.items.forEach((item, index) => {
+    if (!item.subOrderId) item.subOrderId = `${this.orderId}-${index + 1}`;
+    if (!item.status) item.status = this.orderStatus;
+  });
+});
 
 orderSchema.index({ user: 1, paymentStatus: 1, createdAt: -1 });
 orderSchema.index({ "items.productId": 1, paymentStatus: 1, createdAt: -1 });

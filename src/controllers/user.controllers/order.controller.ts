@@ -15,6 +15,7 @@ import Order, { ORDER_STATUS } from "../../models/orderModels/order.model.js";
 import Payment, { PAYMENT_STATUS } from "../../models/orderModels/payment.model.js";
 import Variant from "../../models/productModels/variant.model.js";
 import { calculateCashback, findApplicableOffers } from "../../utils/offer.util.js";
+import { presentOrder } from "../../utils/fulfilment.util.js";
 
 const razorpay = new Razorpay({
     key_id: process.env.RAZORPAY_KEY_ID || "",
@@ -561,7 +562,12 @@ const verifyPayment = async (req: AuthRequest, res: Response) => {
 
         const order = await Order.findByIdAndUpdate(
             payment.orderId,
-            { paymentStatus: "PAID", orderStatus: ORDER_STATUS.CONFIRMED },
+            {
+                paymentStatus: "PAID",
+                orderStatus: ORDER_STATUS.CONFIRMED,
+                "items.$[].status": ORDER_STATUS.CONFIRMED,
+                "items.$[].statusUpdatedAt": new Date(),
+            },
             { new: true }
         );
 
@@ -639,7 +645,7 @@ const getMyOrders = async (req: AuthRequest, res: Response) => {
 
         return res.status(200).json({
             success: true,
-            data: orders,
+            data: orders.map((order) => presentOrder(order)),
             pagination: {
                 total,
                 page: pageNum,
@@ -653,7 +659,8 @@ const getMyOrders = async (req: AuthRequest, res: Response) => {
     }
 };
 
-// Accepts either the Mongo _id (what verify-payment returns) or the ORD-... orderId.
+// Accepts the Mongo _id (what verify-payment returns), the ORD-... orderId,
+// or one item's ORD-...-N subOrderId (resolves to its parent order).
 const getMyOrderById = async (req: AuthRequest, res: Response) => {
     try {
         if (!req.user) {
@@ -665,7 +672,9 @@ const getMyOrderById = async (req: AuthRequest, res: Response) => {
             return res.status(400).json({ success: false, message: "orderId is required." });
         }
 
-        const idFilter = mongoose.isValidObjectId(orderId) ? { _id: orderId } : { orderId };
+        const idFilter = mongoose.isValidObjectId(orderId)
+            ? { _id: orderId }
+            : { $or: [{ orderId }, { "items.subOrderId": orderId }] };
         const order = await Order.findOne({ ...idFilter, user: req.user._id })
             .select("-appliedOffer")
             .lean();
@@ -674,7 +683,7 @@ const getMyOrderById = async (req: AuthRequest, res: Response) => {
             return res.status(404).json({ success: false, message: "Order not found." });
         }
 
-        return res.status(200).json({ success: true, data: order });
+        return res.status(200).json({ success: true, data: presentOrder(order) });
     } catch (error: any) {
         console.error("Get My Order Error:", error);
         return res.status(500).json({ success: false, message: "Internal server error", error: error.message });
