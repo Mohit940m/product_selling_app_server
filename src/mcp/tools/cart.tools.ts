@@ -1,7 +1,7 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import { apiRequest } from '../client/apiClient.js';
-import { USER_TOKEN } from '../config.js';
+import type { ToolContext } from '../context.js';
 import { jsonResult, runTool } from './helpers.js';
 
 /**
@@ -11,7 +11,7 @@ import { jsonResult, runTool } from './helpers.js';
  * - add_to_cart       -> POST /api/v1/user/cart/add-to-cart      (state-changing)
  * - remove_from_cart  -> POST /api/v1/user/cart/remove-from-cart (state-changing)
  */
-export function registerCartTools(server: McpServer): void {
+export function registerCartTools(server: McpServer, ctx: ToolContext): void {
   server.registerTool(
     'get_cart',
     {
@@ -25,7 +25,7 @@ export function registerCartTools(server: McpServer): void {
         const data = await apiRequest({
           method: 'GET',
           path: '/api/v1/user/cart/get-cart',
-          token: USER_TOKEN,
+          token: ctx.userToken,
         });
         return jsonResult(data);
       }),
@@ -53,7 +53,7 @@ export function registerCartTools(server: McpServer): void {
         const data = await apiRequest({
           method: 'POST',
           path: '/api/v1/user/cart/add-to-cart',
-          token: USER_TOKEN,
+          token: ctx.userToken,
           body: { productId, variantId, quantity },
         });
         return jsonResult(data);
@@ -82,7 +82,7 @@ export function registerCartTools(server: McpServer): void {
         const data = await apiRequest({
           method: 'POST',
           path: '/api/v1/user/cart/remove-from-cart',
-          token: USER_TOKEN,
+          token: ctx.userToken,
           body: { productId, variantId, quantity },
         });
         return jsonResult(data);

@@ -1,7 +1,7 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import { apiRequest } from '../client/apiClient.js';
-import { SELLER_TOKEN } from '../config.js';
+import type { ToolContext } from '../context.js';
 import { jsonResult, runTool } from './helpers.js';
 
 /**
@@ -14,7 +14,7 @@ import { jsonResult, runTool } from './helpers.js';
  *        seller_edit_product_status, seller_create_offer,
  *        seller_edit_offer_status, seller_delete_offer
  */
-export function registerSellerTools(server: McpServer): void {
+export function registerSellerTools(server: McpServer, ctx: ToolContext): void {
   server.registerTool(
     'seller_list_products',
     {
@@ -32,7 +32,7 @@ export function registerSellerTools(server: McpServer): void {
         const data = await apiRequest({
           method: 'GET',
           path: '/api/v1/seller/products/get-all-products',
-          token: SELLER_TOKEN,
+          token: ctx.sellerToken,
           query: { page, limit, category, search },
         });
         return jsonResult(data);
@@ -53,7 +53,7 @@ export function registerSellerTools(server: McpServer): void {
         const data = await apiRequest({
           method: 'GET',
           path: `/api/v1/seller/products/get-product/${encodeURIComponent(productId)}`,
-          token: SELLER_TOKEN,
+          token: ctx.sellerToken,
         });
         return jsonResult(data);
       }),
@@ -76,7 +76,7 @@ export function registerSellerTools(server: McpServer): void {
         const data = await apiRequest({
           method: 'PATCH',
           path: `/api/v1/seller/products/increase-stock/${encodeURIComponent(productId)}`,
-          token: SELLER_TOKEN,
+          token: ctx.sellerToken,
           body: { variantId, addedStock },
         });
         return jsonResult(data);
@@ -100,7 +100,7 @@ export function registerSellerTools(server: McpServer): void {
         const data = await apiRequest({
           method: 'PATCH',
           path: `/api/v1/seller/products/edit-variant-price/${encodeURIComponent(productId)}`,
-          token: SELLER_TOKEN,
+          token: ctx.sellerToken,
           body: { variantId, price },
         });
         return jsonResult(data);
@@ -123,7 +123,7 @@ export function registerSellerTools(server: McpServer): void {
         const data = await apiRequest({
           method: 'PATCH',
           path: `/api/v1/seller/products/edit-product-status/${encodeURIComponent(productId)}`,
-          token: SELLER_TOKEN,
+          token: ctx.sellerToken,
           body: { status },
         });
         return jsonResult(data);
@@ -142,7 +142,7 @@ export function registerSellerTools(server: McpServer): void {
         const data = await apiRequest({
           method: 'GET',
           path: '/api/v1/seller/shipping/get-shipping-config',
-          token: SELLER_TOKEN,
+          token: ctx.sellerToken,
         });
         return jsonResult(data);
       }),
@@ -164,7 +164,7 @@ export function registerSellerTools(server: McpServer): void {
         const data = await apiRequest({
           method: 'POST',
           path: '/api/v1/seller/shipping/calculate-shipping-cost',
-          token: SELLER_TOKEN,
+          token: ctx.sellerToken,
           body: { destinationCity, destinationState },
         });
         return jsonResult(data);
@@ -212,7 +212,7 @@ export function registerSellerTools(server: McpServer): void {
         const data = await apiRequest({
           method: 'POST',
           path: '/api/v1/seller/offers/create-offer',
-          token: SELLER_TOKEN,
+          token: ctx.sellerToken,
           body: args,
         });
         return jsonResult(data);
@@ -231,7 +231,7 @@ export function registerSellerTools(server: McpServer): void {
         const data = await apiRequest({
           method: 'GET',
           path: '/api/v1/seller/offers/',
-          token: SELLER_TOKEN,
+          token: ctx.sellerToken,
         });
         return jsonResult(data);
       }),
@@ -253,7 +253,7 @@ export function registerSellerTools(server: McpServer): void {
         const data = await apiRequest({
           method: 'PATCH',
           path: `/api/v1/seller/offers/edit-offer-status/${encodeURIComponent(offerId)}`,
-          token: SELLER_TOKEN,
+          token: ctx.sellerToken,
           body: { isActive },
         });
         return jsonResult(data);
@@ -275,7 +275,7 @@ export function registerSellerTools(server: McpServer): void {
         const data = await apiRequest({
           method: 'DELETE',
           path: `/api/v1/seller/offers/delete-offer/${encodeURIComponent(offerId)}`,
-          token: SELLER_TOKEN,
+          token: ctx.sellerToken,
         });
         return jsonResult(data);
       }),

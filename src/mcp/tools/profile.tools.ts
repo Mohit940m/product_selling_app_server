@@ -1,6 +1,6 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { apiRequest } from '../client/apiClient.js';
-import { USER_TOKEN } from '../config.js';
+import type { ToolContext } from '../context.js';
 import { jsonResult, runTool } from './helpers.js';
 
 /**
@@ -8,7 +8,7 @@ import { jsonResult, runTool } from './helpers.js';
  *
  * - get_profile -> GET /api/v1/user/profile
  */
-export function registerProfileTools(server: McpServer): void {
+export function registerProfileTools(server: McpServer, ctx: ToolContext): void {
   server.registerTool(
     'get_profile',
     {
@@ -22,7 +22,7 @@ export function registerProfileTools(server: McpServer): void {
         const data = await apiRequest({
           method: 'GET',
           path: '/api/v1/user/profile',
-          token: USER_TOKEN,
+          token: ctx.userToken,
         });
         return jsonResult(data);
       }),

@@ -1,7 +1,7 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import { apiRequest } from '../client/apiClient.js';
-import { USER_TOKEN } from '../config.js';
+import type { ToolContext } from '../context.js';
 import { jsonResult, runTool } from './helpers.js';
 
 /**
@@ -11,7 +11,7 @@ import { jsonResult, runTool } from './helpers.js';
  * - add_to_wishlist     -> POST   /api/v1/user/wishlist/add (state-changing)
  * - remove_from_wishlist -> DELETE /api/v1/user/wishlist/remove/:productId (state-changing)
  */
-export function registerWishlistTools(server: McpServer): void {
+export function registerWishlistTools(server: McpServer, ctx: ToolContext): void {
   server.registerTool(
     'get_wishlist',
     {
@@ -24,7 +24,7 @@ export function registerWishlistTools(server: McpServer): void {
         const data = await apiRequest({
           method: 'GET',
           path: '/api/v1/user/wishlist/',
-          token: USER_TOKEN,
+          token: ctx.userToken,
         });
         return jsonResult(data);
       }),
@@ -45,7 +45,7 @@ export function registerWishlistTools(server: McpServer): void {
         const data = await apiRequest({
           method: 'POST',
           path: '/api/v1/user/wishlist/add',
-          token: USER_TOKEN,
+          token: ctx.userToken,
           body: { productId },
         });
         return jsonResult(data);
@@ -67,7 +67,7 @@ export function registerWishlistTools(server: McpServer): void {
         const data = await apiRequest({
           method: 'DELETE',
           path: `/api/v1/user/wishlist/remove/${encodeURIComponent(productId)}`,
-          token: USER_TOKEN,
+          token: ctx.userToken,
         });
         return jsonResult(data);
       }),

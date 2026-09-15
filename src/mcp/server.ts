@@ -1,45 +1,14 @@
-import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
-import { registerProductTools } from './tools/products.tools.js';
-import { registerCartTools } from './tools/cart.tools.js';
-import { registerWishlistTools } from './tools/wishlist.tools.js';
-import { registerProfileTools } from './tools/profile.tools.js';
-import { registerOrderTools } from './tools/orders.tools.js';
-import { registerSellerTools } from './tools/seller.tools.js';
-import { API_BASE_URL } from './config.js';
+import { createMcpServer } from './createServer.js';
+import { API_BASE_URL, SELLER_TOKEN, USER_TOKEN } from './config.js';
 
 /**
- * MCP server for product_selling_app_server.
- *
- * Exposes the e-commerce backend's capabilities as MCP tools over a stdio
- * transport. It is a thin HTTP wrapper around the existing REST API (see
- * docs/mcp-server-plan.md), reusing the app's JWT auth, validation, caching
- * and offer logic. Configure MCP_API_BASE_URL, MCP_API_TOKEN (buyer) and
- * MCP_SELLER_API_TOKEN (seller) in the environment.
- *
- * Only tools backed by existing endpoints are registered.
+ * stdio entry point (npm run mcp). One process acts as the buyer and seller
+ * identified by MCP_API_TOKEN / MCP_SELLER_API_TOKEN. For per-user access
+ * over HTTP (the agent service), see http.ts.
  */
-export function createMcpServer(): McpServer {
-  const server = new McpServer({
-    name: 'product-selling-app-mcp',
-    version: '1.0.0',
-  });
-
-  // Public / buyer tools
-  registerProductTools(server);
-  registerCartTools(server);
-  registerWishlistTools(server);
-  registerProfileTools(server);
-  registerOrderTools(server);
-
-  // Seller tools
-  registerSellerTools(server);
-
-  return server;
-}
-
 async function main(): Promise<void> {
-  const server = createMcpServer();
+  const server = createMcpServer({ userToken: USER_TOKEN, sellerToken: SELLER_TOKEN }, 'all');
   const transport = new StdioServerTransport();
   await server.connect(transport);
   // stdout is reserved for the MCP protocol; log to stderr.

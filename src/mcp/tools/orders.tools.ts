@@ -1,7 +1,7 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import { apiRequest } from '../client/apiClient.js';
-import { USER_TOKEN } from '../config.js';
+import type { ToolContext } from '../context.js';
 import { jsonResult, runTool } from './helpers.js';
 
 /**
@@ -11,7 +11,7 @@ import { jsonResult, runTool } from './helpers.js';
  * - list_my_orders -> GET /api/v1/user/orders
  * - get_order      -> GET /api/v1/user/orders/:orderId
  */
-export function registerOrderTools(server: McpServer): void {
+export function registerOrderTools(server: McpServer, ctx: ToolContext): void {
   server.registerTool(
     'list_my_orders',
     {
@@ -32,7 +32,7 @@ export function registerOrderTools(server: McpServer): void {
         const data = await apiRequest({
           method: 'GET',
           path: '/api/v1/user/orders',
-          token: USER_TOKEN,
+          token: ctx.userToken,
           query: { page, limit, includeUnpaid: includeUnpaid ? 'true' : undefined },
         });
         return jsonResult(data);
@@ -54,7 +54,7 @@ export function registerOrderTools(server: McpServer): void {
         const data = await apiRequest({
           method: 'GET',
           path: `/api/v1/user/orders/${encodeURIComponent(orderId)}`,
-          token: USER_TOKEN,
+          token: ctx.userToken,
         });
         return jsonResult(data);
       }),

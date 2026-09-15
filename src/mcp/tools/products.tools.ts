@@ -1,7 +1,7 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import { apiRequest } from '../client/apiClient.js';
-import { USER_TOKEN } from '../config.js';
+import type { ToolContext } from '../context.js';
 import { jsonResult, runTool } from './helpers.js';
 
 /**
@@ -11,7 +11,7 @@ import { jsonResult, runTool } from './helpers.js';
  * - search_products -> GET /api/v1/user/products/get-all-products
  * - get_product     -> GET /api/v1/user/products/get-product/:productId
  */
-export function registerProductTools(server: McpServer): void {
+export function registerProductTools(server: McpServer, ctx: ToolContext): void {
   server.registerTool(
     'search_products',
     {
@@ -55,7 +55,7 @@ export function registerProductTools(server: McpServer): void {
         const data = await apiRequest({
           method: 'GET',
           path: '/api/v1/user/products/get-all-products',
-          token: USER_TOKEN,
+          token: ctx.userToken,
           allowAnonymous: true,
           query,
         });
@@ -82,7 +82,7 @@ export function registerProductTools(server: McpServer): void {
         const data = await apiRequest({
           method: 'GET',
           path: `/api/v1/user/products/get-product/${encodeURIComponent(productId)}`,
-          token: USER_TOKEN,
+          token: ctx.userToken,
           allowAnonymous: true,
           headers: variantId ? { 'variant-id': variantId } : undefined,
         });
