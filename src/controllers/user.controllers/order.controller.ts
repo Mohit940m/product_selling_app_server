@@ -14,7 +14,7 @@ import SellerShipping from "../../models/productModels/sellerShipping.model.js";
 import Order, { ORDER_STATUS } from "../../models/orderModels/order.model.js";
 import Payment, { PAYMENT_STATUS } from "../../models/orderModels/payment.model.js";
 import Variant from "../../models/productModels/variant.model.js";
-import { findApplicableOffers } from "../../utils/offer.util.js";
+import { calculateCashback, findApplicableOffers } from "../../utils/offer.util.js";
 
 const razorpay = new Razorpay({
     key_id: process.env.RAZORPAY_KEY_ID || "",
@@ -162,7 +162,7 @@ const checkout = async (req: AuthRequest, res: Response) => {
     // 6. Calculate Financials (Subtotal, Discounts)
     let subTotal = 0;
     let totalDiscount = 0;
-    const processedItems = [];
+    const processedItems: any[] = [];
 
     for (let i = 0; i < validItems.length; i++) {
       const item = validItems[i];
@@ -242,7 +242,11 @@ const checkout = async (req: AuthRequest, res: Response) => {
 
     // 8. Final Totals
     const tax = 0; // Placeholder for tax logic if needed
-    const payableAmount = subTotal - totalDiscount + totalShippingCost + tax;
+    const cashback = calculateCashback(
+      itemsWithOffers.map((offerData, i) => ({ offers: offerData.offers, payable: processedItems[i].total })),
+      rawSubtotal
+    );
+    const payableAmount = subTotal - totalDiscount - cashback.amount + totalShippingCost + tax;
 
     // 9. Return Response
     return res.status(200).json({
@@ -255,6 +259,8 @@ const checkout = async (req: AuthRequest, res: Response) => {
           subTotal,
           discount: totalDiscount,
           discountedAmount: subTotal - totalDiscount,
+          cashback: cashback.amount,
+          appliedCashback: cashback.applied,
           shipping: totalShippingCost,
           tax,
           total: Math.max(0, payableAmount)
@@ -351,7 +357,7 @@ const createOrder = async (req: AuthRequest, res: Response) => {
         // Calculate Item Totals
         let subTotal = 0;
         let totalDiscount = 0;
-        const orderItems = [];
+        const orderItems: any[] = [];
 
         for (let i = 0; i < validItems.length; i++) {
             const item = validItems[i];
@@ -388,7 +394,19 @@ const createOrder = async (req: AuthRequest, res: Response) => {
             shippingCost += cost;
         }
 
-        const totalAmount = subTotal - totalDiscount + shippingCost;
+        const cashback = calculateCashback(
+            itemsWithOffers.map((offerData, i) => ({
+                offers: offerData.offers,
+                payable: orderItems[i].priceAtPurchase * orderItems[i].quantity,
+            })),
+            rawSubtotal
+        );
+
+        const totalAmount = Math.max(0, subTotal - totalDiscount - cashback.amount + shippingCost);
+        if (totalAmount < 1) {
+            // Razorpay rejects orders under ₹1.
+            return res.status(400).json({ success: false, message: "Order total must be at least ₹1 to pay online." });
+        }
 
         // 4. Create Order Document
         //
@@ -428,6 +446,8 @@ const createOrder = async (req: AuthRequest, res: Response) => {
             orderStatus: ORDER_STATUS.CREATED,
             subTotal,
             discount: totalDiscount,
+            cashback: cashback.amount,
+            appliedCashback: cashback.applied,
             shippingCost,
             totalAmount
         });

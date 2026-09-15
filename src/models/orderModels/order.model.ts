@@ -44,6 +44,8 @@ export interface IOrderDocument extends Document {
   
   subTotal: number;
   discount: number;
+  cashback: number;
+  appliedCashback: { offerId: mongoose.Types.ObjectId; name: string; amount: number }[];
   shippingCost: number;
   tax: number;
   totalAmount: number;
@@ -143,6 +145,16 @@ const orderSchema = new Schema<IOrderDocument>(
     },
     subTotal: { type: Number, required: true, min: 0 },
     discount: { type: Number, default: 0, min: 0 },
+    // Deducted from totalAmount at checkout; separate from per-item discount.
+    cashback: { type: Number, default: 0, min: 0 },
+    appliedCashback: [
+      {
+        _id: false,
+        offerId: { type: Schema.Types.ObjectId, ref: "Offer" },
+        name: String,
+        amount: Number,
+      },
+    ],
     shippingCost: { type: Number, default: 0, min: 0 },
     tax: { type: Number, default: 0, min: 0 },
     totalAmount: { type: Number, required: true, min: 0 },

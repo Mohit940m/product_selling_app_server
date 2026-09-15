@@ -1,5 +1,5 @@
 import mongoose from "mongoose";
-import Offer, { IOfferDocument, IDiscountConfig } from "../models/productModels/offer.model.js";
+import Offer, { IOfferDocument, IDiscountConfig, ICashbackConfig } from "../models/productModels/offer.model.js";
 
 export interface IOfferCheckItem {
   productId: string | mongoose.Types.ObjectId;
@@ -111,23 +111,10 @@ const calculateBestPrice = (originalPrice: number, offers: IOfferDocument[], car
   const valueToCheck = cartTotal ?? originalPrice;
 
   for (const offer of offers) {
-    // Only DISCOUNT actually adjusts a price here. This isn't a minor
-    // gap: BUY_GET, CASHBACK, and PRODUCT_BUNDLE are all fully creatable
-    // through the seller admin app's real OffersPage UI (grepped the
-    // whole backend — the only other places these three types appear at
-    // all are the OFFER_TYPES enum and the config-shape validator in
-    // offer.model.ts; nothing computes an actual effect for any of
-    // them). A seller can save a "Buy 2 Get 1 Free" or "₹50 cashback"
-    // offer successfully, and it will show up as "applicable" in
-    // offers: [...] on cart/product responses, but a buyer's price never
-    // actually changes because of it — the offer is real data with zero
-    // functional effect. Each needs materially different logic (BUY_GET
-    // needs to identify and price a "free" unit within the cart's
-    // existing line items; CASHBACK is presumably a post-purchase credit
-    // rather than a checkout-time price change at all; PRODUCT_BUNDLE
-    // needs to detect the specific combination of items in
-    // config.bundleItems and reprice that whole group at
-    // config.bundlePrice) — not something to approximate here.
+    // Per-unit price changes only. CASHBACK is order-level (see
+    // calculateCashback). BUY_GET and PRODUCT_BUNDLE still have no price
+    // effect: each needs its own rules (free-unit thresholds, detecting a
+    // bundle combination) that haven't been decided.
     if (offer.type === "DISCOUNT" && offer.isActive) {
       if (offer.minCartValue && valueToCheck < offer.minCartValue) continue;
 
@@ -149,4 +136,55 @@ const calculateBestPrice = (originalPrice: number, offers: IOfferDocument[], car
   }
 
   return Math.max(0, bestPrice); // Ensure price doesn't go negative
+};
+
+export interface ICashbackLine {
+  offers?: IOfferDocument[];
+  /** What the buyer pays for this line after per-unit discounts. */
+  payable: number;
+}
+
+export interface IAppliedCashback {
+  offerId: mongoose.Types.ObjectId;
+  name: string;
+  amount: number;
+}
+
+/**
+ * CASHBACK offers are deducted once from the order total at checkout, not
+ * per unit. Each distinct offer counts once however many lines it covers,
+ * is gated on minCartValue against the cart subtotal, and is capped at the
+ * payable amount of the lines it applies to; the combined cashback never
+ * exceeds the whole cart's payable amount.
+ */
+export const calculateCashback = (lines: ICashbackLine[], cartTotal: number) => {
+  const byOffer = new Map<string, { offer: IOfferDocument; eligiblePayable: number }>();
+
+  for (const line of lines) {
+    for (const offer of line.offers ?? []) {
+      if (offer.type !== "CASHBACK" || !offer.isActive) continue;
+      if (offer.minCartValue && cartTotal < offer.minCartValue) continue;
+      const key = offer._id.toString();
+      const entry = byOffer.get(key) ?? { offer, eligiblePayable: 0 };
+      entry.eligiblePayable += line.payable;
+      byOffer.set(key, entry);
+    }
+  }
+
+  let remaining = Math.max(0, lines.reduce((sum, line) => sum + line.payable, 0));
+  const applied: IAppliedCashback[] = [];
+
+  for (const { offer, eligiblePayable } of byOffer.values()) {
+    const configured = Number((offer.config as ICashbackConfig).amount);
+    if (!Number.isFinite(configured) || configured <= 0) continue;
+    const amount = Math.min(configured, eligiblePayable, remaining);
+    if (amount <= 0) continue;
+    remaining -= amount;
+    applied.push({ offerId: offer._id as mongoose.Types.ObjectId, name: offer.name, amount });
+  }
+
+  return {
+    amount: applied.reduce((sum, c) => sum + c.amount, 0),
+    applied,
+  };
 };

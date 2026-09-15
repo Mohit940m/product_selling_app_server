@@ -783,6 +783,13 @@ sees a shipping cost, as part of the full order summary.
 ### 1. Checkout
 Calculates the final order summary including shipping, offers, and totals.
 
+`DISCOUNT` offers lower each item's price (`discount`). `CASHBACK` offers
+are deducted once from the order total (`cashback`) — each offer's amount
+counts once however many cart lines it covers, respects `minCartValue`,
+and never exceeds what the buyer pays for the items it applies to.
+`create-order` charges the same `total`. `GET /cart/get-cart` also returns
+`cashback`/`appliedCashback`, and its `total` already has cashback taken off.
+
 - **Endpoint:** `POST /orders/checkout`
 - **Auth Type:** Bearer Token
 - **Content-Type:** `application/json`
@@ -878,9 +885,13 @@ Provide full address details to create a new address and use it for this checkou
             "subTotal": 8397,
             "discount": 1500,
             "discountedAmount": 6897,
+            "cashback": 100,
+            "appliedCashback": [
+                { "offerId": "69a1...", "name": "₹100 back", "amount": 100 }
+            ],
             "shipping": 30,
             "tax": 0,
-            "total": 6927
+            "total": 6827
         },
         "shippingDetails": [
             {
@@ -1006,6 +1017,8 @@ Lists the authenticated user's orders, newest first.
             "orderStatus": "CONFIRMED",
             "subTotal": 998,
             "discount": 0,
+            "cashback": 0,
+            "appliedCashback": [],
             "shippingCost": 50,
             "tax": 0,
             "totalAmount": 1048,

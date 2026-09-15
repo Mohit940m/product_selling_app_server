@@ -4,7 +4,7 @@ import { AuthRequest } from "../../auth/auth.middleware.js";
 import Cart from "../../models/userModels/cart.model.js";
 import Product from "../../models/productModels/product.model.js";
 import Variant from "../../models/productModels/variant.model.js";
-import { findApplicableOffers } from "../../utils/offer.util.js";
+import { calculateCashback, findApplicableOffers } from "../../utils/offer.util.js";
 
 const addToCart = async (req: AuthRequest, res: Response) => {
     try {
@@ -244,10 +244,18 @@ const getCart = async (req: AuthRequest, res: Response) => {
             };
         });
 
+        const cashback = calculateCashback(
+            itemsWithOffers.map((offerData, index) => ({
+                offers: offerData.offers,
+                payable: (offerData.discountedPrice ?? offerData.price) * (validItems[index] as any).quantity,
+            })),
+            rawSubtotal
+        );
+
         // Update Cart totals
         cart.subTotal = subTotal;
         cart.discount = totalDiscount;
-        cart.total = Math.max(0, subTotal - totalDiscount);
+        cart.total = Math.max(0, subTotal - totalDiscount - cashback.amount);
 
         // If items were filtered out (invalid), update the items array
         if (validItems.length !== cart.items.length) {
@@ -261,7 +269,9 @@ const getCart = async (req: AuthRequest, res: Response) => {
             message: "Cart fetched successfully",
             data: {
                 ...cart.toObject(),
-                items: enrichedItems
+                items: enrichedItems,
+                cashback: cashback.amount,
+                appliedCashback: cashback.applied
             }
         });
     } catch (error: any) {

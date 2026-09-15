@@ -936,12 +936,13 @@ dates, targets) — only its `isActive` flag and whole-document delete.
 
 ## Orders
 
-Read-only. An order can contain several sellers' items, so every response
-contains **only this seller's line items** plus `sellerSubtotal` (those
-lines at purchase price). The order's own `totalAmount`, `discount`,
+An order can contain several sellers' items, so every response contains
+**only this seller's line items** plus `sellerSubtotal` (those lines at
+purchase price). The order's own `totalAmount`, `discount`, `cashback`,
 `shippingCost` and `tax` cover all sellers and are deliberately not
-returned. Only `PAID` and `REFUNDED` orders are visible. There is no
-endpoint to change an order's status or attach tracking yet.
+returned. Only `PAID` and `REFUNDED` orders are visible.
+`canUpdateStatus` is `true` when the order is paid and contains only
+this seller's products (see *Update Order Status*).
 
 ### 1. List Orders
 - **Endpoint:** `GET /orders`
@@ -968,6 +969,7 @@ endpoint to change an order's status or attach tracking yet.
       "items": [
         { "productId": "698a...", "variantId": "698b...", "name": "Classic Tee", "image": "https://...", "priceAtPurchase": 499, "quantity": 2, "attributes": { "size": "M" } }
       ],
+      "canUpdateStatus": true,
       "itemCount": 2,
       "sellerSubtotal": 998
     }
@@ -984,3 +986,34 @@ endpoint to change an order's status or attach tracking yet.
 element of `data` above, plus `tracking` when set. Returns `404` if the
 order doesn't exist, isn't paid/refunded, or contains none of this
 seller's products.
+
+### 3. Update Order Status
+Moves an order forward through fulfilment:
+`CONFIRMED → SHIPPED → OUT FOR DELIVERY → DELIVERED`. Stages can be
+skipped (e.g. `CONFIRMED → DELIVERED`) but never moved backwards.
+
+- **Endpoint:** `PATCH /orders/:orderId/status`
+- **Auth Type:** Bearer Token
+- **Content-Type:** `application/json`
+
+#### Request Body
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `status` | String | Yes | `SHIPPED`, `OUT FOR DELIVERY` or `DELIVERED`. |
+| `tracking` | Object | No | `{ courier, trackingId, trackingUrl }`; replaces any existing tracking. `trackingUrl` must be `http(s)`. |
+
+```json
+{
+  "status": "SHIPPED",
+  "tracking": { "courier": "Delhivery", "trackingId": "DLV123456", "trackingUrl": "https://www.delhivery.com/track/package/DLV123456" }
+}
+```
+
+#### Responses
+- `200` — the updated order, same shape as *Get Order*.
+- `400` — invalid `status` or `trackingUrl`.
+- `404` — order not found, not `PAID`, or contains none of this seller's products.
+- `409` — the order also contains other sellers' items (one status covers the whole order), the target stage isn't later than the current one, or a concurrent update got there first.
+
+`CANCELLED` can't be set here: these orders are already paid and there is
+no refund flow yet.
