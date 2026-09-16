@@ -81,4 +81,30 @@ export function registerOrderTools(server: McpServer, ctx: ToolContext): void {
         return jsonResult(data);
       }),
   );
+
+  server.registerTool(
+    'cancel_order_item',
+    {
+      title: 'Cancel an order item',
+      description:
+        "Cancel a single item (sub-order) in the authenticated user's order and start its refund. " +
+        'Only works for a paid item that has not shipped yet (status CONFIRMED). Restores stock and ' +
+        'records a refund; when the last item is cancelled the whole order is refunded. Write action — confirm with the user first.',
+      inputSchema: {
+        orderId: z.string().describe('The order Mongo _id or its ORD-... id.'),
+        subOrderId: z.string().describe('The specific item/sub-order id, e.g. ORD-...-1.'),
+        reason: z.string().max(300).optional().describe('Optional reason the buyer gave for cancelling.'),
+      },
+    },
+    async ({ orderId, subOrderId, reason }) =>
+      runTool(async () => {
+        const data = await apiRequest({
+          method: 'PATCH',
+          path: `/api/v1/user/orders/${encodeURIComponent(orderId)}/items/${encodeURIComponent(subOrderId)}/cancel`,
+          token: ctx.userToken,
+          body: reason ? { reason } : {},
+        });
+        return jsonResult(data);
+      }),
+  );
 }

@@ -13,6 +13,7 @@ import { registerSellerOrderTools } from './tools/sellerOrders.tools.js';
 const WRITE_TOOLS = new Set([
   'add_to_cart',
   'remove_from_cart',
+  'cancel_order_item',
   'add_to_wishlist',
   'remove_from_wishlist',
   'seller_increase_stock',
@@ -27,7 +28,7 @@ const WRITE_TOOLS = new Set([
   'seller_update_order_item_status',
 ]);
 
-const DESTRUCTIVE_TOOLS = new Set(['seller_delete_offer', 'remove_from_cart', 'remove_from_wishlist']);
+const DESTRUCTIVE_TOOLS = new Set(['seller_delete_offer', 'remove_from_cart', 'remove_from_wishlist', 'cancel_order_item']);
 
 /**
  * MCP server for product_selling_app_server: a thin wrapper around the REST

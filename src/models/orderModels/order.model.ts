@@ -17,6 +17,19 @@ export interface IOrderTracking {
   trackingUrl?: string;
 }
 
+// Record-only refund for a cancelled item. INITIATED is recorded the moment a
+// buyer cancels a paid, pre-ship item; there is no live Razorpay refund call
+// yet, so nothing flips this to COMPLETED automatically — that transition (and
+// the actual razorpay.payments.refund(...) call) is the one clearly-marked
+// place to wire real refunds in later. See cancelOrderItem in
+// user.controllers/order.controller.ts.
+export interface IOrderRefund {
+  status: "INITIATED" | "COMPLETED";
+  amount: number;
+  initiatedAt: Date;
+  reason?: string;
+}
+
 export interface IOrderProduct {
   productId: mongoose.Types.ObjectId;
   variantId: mongoose.Types.ObjectId;
@@ -31,6 +44,8 @@ export interface IOrderProduct {
   status?: OrderStatus;
   tracking?: IOrderTracking;
   statusUpdatedAt?: Date;
+  // Present only once this line has been cancelled by the buyer (pre-ship).
+  refund?: IOrderRefund;
 }
 
 export interface IOrderAddress {
@@ -96,6 +111,12 @@ const orderProductSchema = new Schema<IOrderProduct>(
       trackingUrl: String,
     },
     statusUpdatedAt: { type: Date },
+    refund: {
+      status: { type: String, enum: ["INITIATED", "COMPLETED"] },
+      amount: { type: Number, min: 0 },
+      initiatedAt: { type: Date },
+      reason: { type: String },
+    },
   },
   { _id: false }
 );

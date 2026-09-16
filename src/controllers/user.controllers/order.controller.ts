@@ -11,11 +11,11 @@ import Cart from "../../models/userModels/cart.model.js";
 import Address from "../../models/userModels/address.model.js";
 import User from "../../models/userModels/user.model.js";
 import SellerShipping from "../../models/productModels/sellerShipping.model.js";
-import Order, { ORDER_STATUS } from "../../models/orderModels/order.model.js";
+import Order, { ORDER_STATUS, type IOrderDocument, type OrderStatus } from "../../models/orderModels/order.model.js";
 import Payment, { PAYMENT_STATUS } from "../../models/orderModels/payment.model.js";
 import Variant from "../../models/productModels/variant.model.js";
 import { calculateCashback, findApplicableOffers } from "../../utils/offer.util.js";
-import { presentOrder } from "../../utils/fulfilment.util.js";
+import { presentOrder, resolveItems, deriveOrderStatus } from "../../utils/fulfilment.util.js";
 
 const razorpay = new Razorpay({
     key_id: process.env.RAZORPAY_KEY_ID || "",
@@ -690,4 +690,130 @@ const getMyOrderById = async (req: AuthRequest, res: Response) => {
     }
 };
 
-export { checkout, createOrder, verifyPayment, getMyOrders, getMyOrderById };
+// Buyer-initiated cancellation of a single paid, pre-ship (CONFIRMED) item.
+// Restores that variant's stock, marks the line CANCELLED, and records a
+// record-only refund (status INITIATED) for the line's paid amount. When the
+// last remaining item is cancelled, the whole order's paymentStatus flips to
+// REFUNDED. There is intentionally no live Razorpay refund call here — see the
+// IOrderRefund note in order.model.ts for where to add one.
+//
+// Accepts the Mongo _id, the ORD-... orderId, or the item's ORD-...-N subOrderId
+// as :orderId (same as getMyOrderById), and the specific ORD-...-N as :subOrderId.
+const cancelOrderItem = async (req: AuthRequest, res: Response) => {
+    try {
+        if (!req.user) {
+            return res.status(401).json({ success: false, message: "Unauthorized. User not found." });
+        }
+
+        const { orderId, subOrderId } = req.params;
+        if (!orderId || !subOrderId) {
+            return res.status(400).json({ success: false, message: "orderId and subOrderId are required." });
+        }
+        const reason = typeof req.body?.reason === "string" ? req.body.reason.trim().slice(0, 300) : "";
+
+        const idFilter = mongoose.isValidObjectId(orderId)
+            ? { _id: orderId }
+            : { $or: [{ orderId }, { "items.subOrderId": orderId }] };
+        const order = await Order.findOne({ ...idFilter, user: req.user._id });
+
+        if (!order) {
+            return res.status(404).json({ success: false, message: "Order not found." });
+        }
+
+        // Only a paid order has had its stock deducted and money taken, so only
+        // a paid order can be cancelled+refunded here. Unpaid (PENDING/FAILED)
+        // orders are abandoned checkouts that never took stock or payment.
+        if (order.paymentStatus !== "PAID") {
+            return res.status(400).json({
+                success: false,
+                message: "Only a paid order can be cancelled.",
+            });
+        }
+
+        const plain = order.toObject() as IOrderDocument;
+        const resolved = resolveItems(plain);
+        const index = resolved.findIndex((item) => item.subOrderId === subOrderId);
+        if (index === -1) {
+            return res.status(404).json({ success: false, message: "Item not found in this order." });
+        }
+
+        const current = resolved[index].status as OrderStatus;
+        if (current === ORDER_STATUS.CANCELLED) {
+            return res.status(409).json({ success: false, message: "This item is already cancelled." });
+        }
+        // Pre-ship only: once a seller has moved the item to SHIPPED or beyond,
+        // the buyer can no longer self-cancel it.
+        if (current !== ORDER_STATUS.CONFIRMED) {
+            return res.status(409).json({
+                success: false,
+                message: `This item is ${current} and can no longer be cancelled. Please contact support.`,
+            });
+        }
+
+        const line = resolved[index];
+        const refundAmount = line.priceAtPurchase * line.quantity;
+        const itemPath = `items.${index}`;
+
+        // Guard on the item's stored status (or, for legacy items with no stored
+        // status, its absence plus the order status it inherited) so two
+        // concurrent cancels — or a cancel racing a seller status update — can't
+        // both apply. Mirrors updateSellerOrderItemStatus's guard.
+        const rawStatus = plain.items[index].status;
+        const guard = rawStatus
+            ? { [`${itemPath}.status`]: rawStatus }
+            : { [`${itemPath}.status`]: { $exists: false }, orderStatus: plain.orderStatus };
+
+        const updated = await Order.findOneAndUpdate(
+            { _id: plain._id, [`${itemPath}.productId`]: line.productId, ...guard },
+            {
+                $set: {
+                    [`${itemPath}.status`]: ORDER_STATUS.CANCELLED,
+                    [`${itemPath}.subOrderId`]: line.subOrderId,
+                    [`${itemPath}.statusUpdatedAt`]: new Date(),
+                    [`${itemPath}.refund`]: {
+                        status: "INITIATED",
+                        amount: refundAmount,
+                        initiatedAt: new Date(),
+                        ...(reason ? { reason } : {}),
+                    },
+                },
+            },
+            { new: true }
+        );
+
+        if (!updated) {
+            return res.status(409).json({
+                success: false,
+                message: "This item was just updated. Reload the order and try again.",
+            });
+        }
+
+        // Return the reserved stock for the cancelled units.
+        await Variant.findOneAndUpdate({ _id: line.variantId }, { $inc: { stock: line.quantity } });
+
+        // Recompute the order-level summary; when every item is cancelled the
+        // whole order is refunded.
+        const resolvedAfter = resolveItems(updated.toObject() as IOrderDocument);
+        const summary = deriveOrderStatus(resolvedAfter.map((i) => i.status), updated.orderStatus);
+        const allCancelled = resolvedAfter.every((i) => i.status === ORDER_STATUS.CANCELLED);
+
+        const patch: Record<string, unknown> = {};
+        if (summary !== updated.orderStatus) patch.orderStatus = summary;
+        if (allCancelled && updated.paymentStatus === "PAID") patch.paymentStatus = "REFUNDED";
+        if (Object.keys(patch).length > 0) {
+            await Order.updateOne({ _id: updated._id }, { $set: patch });
+            Object.assign(updated, patch);
+        }
+
+        return res.status(200).json({
+            success: true,
+            message: `${line.subOrderId} cancelled. A refund of ₹${refundAmount} has been initiated.`,
+            data: presentOrder(updated.toObject() as IOrderDocument),
+        });
+    } catch (error: any) {
+        console.error("Cancel Order Item Error:", error);
+        return res.status(500).json({ success: false, message: "Internal server error", error: error.message });
+    }
+};
+
+export { checkout, createOrder, verifyPayment, getMyOrders, getMyOrderById, cancelOrderItem };
