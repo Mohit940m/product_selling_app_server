@@ -16,6 +16,7 @@ import Payment, { PAYMENT_STATUS } from "../../models/orderModels/payment.model.
 import Variant from "../../models/productModels/variant.model.js";
 import { calculateCashback, findApplicableOffers } from "../../utils/offer.util.js";
 import { presentOrder, resolveItems, deriveOrderStatus } from "../../utils/fulfilment.util.js";
+import { completeCheckoutSession, recordCheckoutSession, toSessionItems } from "../../utils/checkoutSession.util.js";
 
 const razorpay = new Razorpay({
     key_id: process.env.RAZORPAY_KEY_ID || "",
@@ -249,6 +250,12 @@ const checkout = async (req: AuthRequest, res: Response) => {
     );
     const payableAmount = subTotal - totalDiscount - cashback.amount + totalShippingCost + tax;
 
+    recordCheckoutSession(
+      req,
+      toSessionItems(validItems, processedItems.map((item) => item.discountedPrice)),
+      shippingAddress
+    );
+
     // 9. Return Response
     return res.status(200).json({
       success: true,
@@ -455,6 +462,13 @@ const createOrder = async (req: AuthRequest, res: Response) => {
 
         await newOrder.save();
 
+        recordCheckoutSession(
+            req,
+            toSessionItems(validItems, orderItems.map((item) => item.priceAtPurchase)),
+            shippingAddress,
+            { reachedPayment: true }
+        );
+
         // Check for keys before attempting to create order
         if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
              throw new Error("Razorpay API keys are missing in environment variables.");
@@ -600,6 +614,7 @@ const verifyPayment = async (req: AuthRequest, res: Response) => {
                 }
             }
             await Cart.findOneAndDelete({ userId: order.user });
+            completeCheckoutSession(order.user, order._id as mongoose.Types.ObjectId);
         }
 
         return res.status(200).json({
