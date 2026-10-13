@@ -62,7 +62,8 @@ export async function apiRequest<T = unknown>(
     }
   }
 
-  const requestHeaders: Record<string, string> = { ...(headers || {}) };
+  // Lets the API tell assistant traffic apart (e.g. checkout sessions record their source).
+  const requestHeaders: Record<string, string> = { 'X-Client-Source': 'assistant', ...(headers || {}) };
   if (token) {
     requestHeaders.Authorization = `Bearer ${token}`;
   }

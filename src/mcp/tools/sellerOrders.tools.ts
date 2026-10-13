@@ -11,6 +11,7 @@ import { jsonResult, runTool } from './helpers.js';
  * - seller_list_orders              -> GET   /api/v1/seller/orders
  * - seller_get_order                -> GET   /api/v1/seller/orders/:orderId
  * - seller_update_order_item_status -> PATCH /api/v1/seller/orders/:orderId/items/:subOrderId/status
+ * - seller_list_checkouts           -> GET   /api/v1/seller/checkouts
  */
 export function registerSellerOrderTools(server: McpServer, ctx: ToolContext): void {
   server.registerTool(
@@ -78,6 +79,35 @@ export function registerSellerOrderTools(server: McpServer, ctx: ToolContext): v
           path: `/api/v1/seller/orders/${encodeURIComponent(orderId)}/items/${encodeURIComponent(subOrderId)}/status`,
           token: ctx.sellerToken,
           body: { status, ...(hasTracking ? { tracking: { courier, trackingId, trackingUrl } } : {}) },
+        });
+        return jsonResult(data);
+      }),
+  );
+  server.registerTool(
+    'seller_list_checkouts',
+    {
+      title: 'Seller: list checkouts (abandoned / completed)',
+      description:
+        "List logged-in buyers who went to checkout with the seller's products (in the store app or via the AI assistant), " +
+        'newest first, with their name, email and phone where available and the items they were buying. ' +
+        "status 'not_placed' (default) = checked out but never paid; 'completed' = went on to place a paid order; 'all' = both. " +
+        'The response also has summary counts of not-placed vs completed.',
+      inputSchema: {
+        status: z
+          .enum(['not_placed', 'completed', 'all'])
+          .optional()
+          .describe("Which checkouts to list (default 'not_placed')."),
+        page: z.number().int().positive().optional().describe('Page number (default 1).'),
+        limit: z.number().int().positive().max(50).optional().describe('Items per page (default 10, max 50).'),
+      },
+    },
+    async ({ status, page, limit }) =>
+      runTool(async () => {
+        const data = await apiRequest({
+          method: 'GET',
+          path: '/api/v1/seller/checkouts',
+          token: ctx.sellerToken,
+          query: { status, page, limit },
         });
         return jsonResult(data);
       }),
